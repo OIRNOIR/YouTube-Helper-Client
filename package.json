@@ -1,0 +1,25 @@
+{
+	"name": "youtube-helper-client",
+	"module": "index.ts",
+	"type": "module",
+	"engines": {
+		"bun": ">=1.2.13"
+	},
+	"private": true,
+	"scripts": {
+		"preinstall": "npx only-allow bun",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"lint": "biome check . --write",
+		"style:check": "bun x @biomejs/biome ci .",
+		"typecheck": "bun run --filter \"*\" typecheck"
+	},
+	"dependencies": {
+		"@types/bun": "1.2.18"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.1.1"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}
