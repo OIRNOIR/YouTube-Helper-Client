@@ -200,6 +200,20 @@ async function main() {
 
 	display.writeFrame();
 
+	async function upKey() {
+		if (display.selectedIndex > 0) {
+			display.selectedIndex--;
+			await scrollToSelectedIndex();
+		}
+	}
+
+	async function downKey() {
+		if (display.selectedIndex < display.left.length - 1) {
+			display.selectedIndex++;
+			await scrollToSelectedIndex();
+		}
+	}
+
 	process.stdin.setRawMode(true);
 	process.stdin.resume();
 	process.stdin.setEncoding("utf8");
@@ -224,7 +238,7 @@ async function main() {
 					case "g": {
 						clearInteractionChar();
 						display.selectedIndex = 0;
-						scrollToSelectedIndex();
+						await scrollToSelectedIndex();
 						break;
 					}
 					default: {
@@ -377,7 +391,7 @@ async function main() {
 						filterTypes.stream = !filterTypes.stream;
 						updateHardFilters();
 						populateVideoList();
-						scrollToSelectedIndex();
+						await scrollToSelectedIndex();
 						break;
 					}
 					case "fo": {
@@ -392,7 +406,7 @@ async function main() {
 						filterTypes.stream = true;
 						updateHardFilters();
 						populateVideoList();
-						scrollToSelectedIndex();
+						await scrollToSelectedIndex();
 						break;
 					}
 					default: {
@@ -410,7 +424,7 @@ async function main() {
 						filterTypes.video = !filterTypes.video;
 						updateHardFilters();
 						populateVideoList();
-						scrollToSelectedIndex();
+						await scrollToSelectedIndex();
 						break;
 					}
 					case "fo": {
@@ -425,7 +439,7 @@ async function main() {
 						filterTypes.video = true;
 						updateHardFilters();
 						populateVideoList();
-						scrollToSelectedIndex();
+						await scrollToSelectedIndex();
 						break;
 					}
 					default: {
@@ -443,7 +457,7 @@ async function main() {
 						filterTypes.short = !filterTypes.short;
 						updateHardFilters();
 						populateVideoList();
-						scrollToSelectedIndex();
+						await scrollToSelectedIndex();
 						break;
 					}
 					case "fo": {
@@ -458,7 +472,7 @@ async function main() {
 						filterTypes.short = true;
 						updateHardFilters();
 						populateVideoList();
-						scrollToSelectedIndex();
+						await scrollToSelectedIndex();
 						break;
 					}
 					default: {
@@ -548,6 +562,7 @@ async function main() {
 						break;
 					}
 					default: {
+						clearInteractionChar(true);
 					}
 				}
 				break;
@@ -585,10 +600,35 @@ async function main() {
 						filterUnread = !filterUnread;
 						updateHardFilters();
 						populateVideoList();
-						scrollToSelectedIndex();
+						await scrollToSelectedIndex();
 						break;
 					}
 					default: {
+						clearInteractionChar(true);
+					}
+				}
+				break;
+			}
+			case "j": {
+				switch (currentInteractionChar) {
+					case "": {
+						await downKey();
+						break;
+					}
+					default: {
+						clearInteractionChar(true);
+					}
+				}
+				break;
+			}
+			case "k": {
+				switch (currentInteractionChar) {
+					case "": {
+						await upKey();
+						break;
+					}
+					default: {
+						clearInteractionChar(true);
 					}
 				}
 				break;
@@ -599,18 +639,12 @@ async function main() {
 					switch (keyString.charCodeAt(2)) {
 						case 65: {
 							// Up
-							if (display.selectedIndex > 0) {
-								display.selectedIndex--;
-								await scrollToSelectedIndex();
-							}
+							await upKey();
 							break;
 						}
 						case 66: {
 							// Down
-							if (display.selectedIndex < display.left.length - 1) {
-								display.selectedIndex++;
-								await scrollToSelectedIndex();
-							}
+							await downKey();
 							break;
 						}
 					}
