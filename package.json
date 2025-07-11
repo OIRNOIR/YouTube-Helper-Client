@@ -1,6 +1,6 @@
 {
 	"name": "youtube-helper-client",
-	"module": "index.ts",
+	"module": "src/index.ts",
 	"type": "module",
 	"engines": {
 		"bun": ">=1.2.13"
@@ -14,7 +14,9 @@
 		"typecheck": "bunx tsc --noEmit"
 	},
 	"dependencies": {
-		"@types/bun": "1.2.18"
+		"@types/bun": "1.2.18",
+		"clipboardy": "4.0.0",
+		"emoji-regex": "10.4.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.1.1"

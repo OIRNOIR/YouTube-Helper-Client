@@ -1,9 +1,23 @@
+import { EventEmitter } from "node:events";
+import emojiRegex from "emoji-regex";
+import type { Video } from "./types/Video";
+import { msToMostSignificantWord, msToShort } from "./util";
+
 const MARGIN_VERTICAL = 2;
 const MARGIN_HORIZONTAL = 4;
 const GUTTER = 4;
+const SCROLL_BUFFER = 3;
 
-export default class Display {
-	left: { content: string; selected: boolean; bold: boolean }[];
+interface DisplayEvents {
+	needsData: [];
+}
+
+export default class Display extends EventEmitter<DisplayEvents> {
+	left: {
+		content: string;
+		videoId: string;
+		bold: boolean;
+	}[];
 	right: {
 		content: string;
 		formatting?: string[];
@@ -12,46 +26,141 @@ export default class Display {
 		justify?: boolean;
 	}[];
 	bottom: string[];
+	selectedIndex: number;
+	private emittedNeedsData: boolean;
+	scrollOffset: number;
 
 	constructor() {
+		super();
 		this.left = [];
 		this.right = [];
 		this.bottom = [];
+		this.selectedIndex = 0;
+		this.emittedNeedsData = false;
+		this.scrollOffset = 0;
 	}
 
-	populateTest() {
-		this.left = [];
-		this.right = [];
-		this.bottom = ["[ c Clear ]", "[ t Test ]", "[ q Quit ]"];
-		for (let i = 0; i < 100; i++) {
-			this.left.push({
-				content: `Video ${i} - Random stuff here blablablablablakfjasldkfjasldkjf`,
-				selected: i == 0,
-				bold: i < 10
-			});
+	populateVideoList(data: Video[]) {
+		const selectedVideoId = this.left[this.selectedIndex]?.videoId;
+
+		let longestNameLength = 0;
+
+		for (let i = 0; i < data.length; i++) {
+			const thisItem = data[i];
+			if (thisItem != undefined && thisItem.username.length > longestNameLength) {
+				longestNameLength = thisItem.username.length;
+			}
 		}
+
+		const titleShiftRight = Math.ceil((longestNameLength + 1) / 4) * 4;
+
+		const regex = emojiRegex();
+
+		this.left = data.map((v) => {
+			let formattedUsername = `${v.username.slice(1)}:`;
+			while (formattedUsername.length < titleShiftRight) {
+				formattedUsername = `${formattedUsername} `;
+			}
+			let title = v.title.replaceAll(regex, "").trim();
+			if (title.length == 0) {
+				title = "< Title contained exclusively emojis >";
+			}
+			return {
+				// Might think of something better to put here
+				content: `${formattedUsername}${title}`,
+				videoId: v.videoId,
+				bold: v.unread
+			};
+		});
+		if (selectedVideoId != undefined) {
+			this.selectedIndex = this.left.findIndex(
+				(i) => i.videoId == selectedVideoId
+			);
+		}
+		if (this.selectedIndex == -1 || selectedVideoId == undefined) {
+			this.selectedIndex = 0;
+		}
+		this.emittedNeedsData = false;
+	}
+
+	populateKeyLabels(keyLabels: string[]) {
+		this.bottom = keyLabels;
+	}
+
+	populateVideoInformation(
+		video: Video | null,
+		fullVideoSponsorSegment: null | "sponsor" | "selfpromo" | "exclusive_access"
+	) {
+		this.right = [];
+		if (video == null) return;
+		const videoTypeFormatting =
+			video.type == "video"
+				? "\u001B[37m"
+				: video.type == "stream"
+					? "\u001B[38;5;21m"
+					: "\u001B[38;5;196m";
 		this.right.push({
-			content: "This Video Has The Best Title",
-			formatting: ["\u001B[1m"],
+			content: video.title,
+			formatting: [`\u001B[1m${videoTypeFormatting}`],
 			center: true
 		});
 		this.right.push({
-			content: "Rossmann Koi Group\t1:69:44",
+			content: `${video.displayName}\t${video.duration == null ? "Unknown Duration" : msToShort(video.duration * 1000)}`,
 			formatting: ["\u001B[3;31m", "\u001B[33m"],
 			justify: true
 		});
 		this.right.push({
-			content: "8 Hours Ago",
-			formatting: ["\u001B[32m"],
+			content: `${video.type == "video" ? "Video" : video.type == "stream" ? "Stream" : "Short"}\t${msToMostSignificantWord(Date.now() - video.timestampMS)} Ago`,
+			formatting: [videoTypeFormatting, "\u001B[32m"],
+			justify: true
+		});
+		switch (fullVideoSponsorSegment) {
+			case "sponsor": {
+				this.right.push({
+					content: "Full Video Sponsor",
+					formatting: ["\u001B[38;5;46m"],
+					center: true
+				});
+				break;
+			}
+			case "exclusive_access": {
+				this.right.push({
+					content: "Exclusive Access",
+					formatting: ["\u001B[38;5;35m"],
+					center: true
+				});
+				break;
+			}
+			case "selfpromo": {
+				this.right.push({
+					content: "Self Promotion",
+					formatting: ["\u001B[38;5;220m"],
+					center: true
+				});
+				break;
+			}
+		}
+		this.right.push({
+			content: video.platform,
+			formatting: [],
 			center: true
 		});
+		if (video.isCurrentlyLive) {
+			this.right.push({
+				content: "Currently Live",
+				formatting: ["\u001B[38;5;196m"],
+				center: true
+			});
+		}
 		this.right.push({
 			content: "",
 			formatting: []
 		});
 		this.right.push({
 			content:
-				"This is the biggest fucking description anyone's ever written.\n\nI want it to wrap all around the page several times.\n\nDon't forget to click all the links in the description and do all of the random shit because we want your money.",
+				video.description != null
+					? `${video.title}\n\n${video.description}`
+					: video.title,
 			formatting: [],
 			wrap: true
 		});
@@ -64,6 +173,27 @@ export default class Display {
 		}
 		const width = process.stdout.columns;
 		const height = process.stdout.rows;
+
+		let screenScrollTop = 0;
+		let screenScrollBottom = 0;
+
+		function calculateScrollBounds(selectedIndex: number, scrollOffset: number) {
+			screenScrollTop = selectedIndex - scrollOffset;
+			screenScrollBottom = height - MARGIN_VERTICAL * 3 - 2 - screenScrollTop;
+		}
+
+		calculateScrollBounds(this.selectedIndex, this.scrollOffset);
+
+		while (screenScrollTop < SCROLL_BUFFER && this.scrollOffset > 0) {
+			this.scrollOffset--;
+			calculateScrollBounds(this.selectedIndex, this.scrollOffset);
+		}
+
+		while (screenScrollBottom < SCROLL_BUFFER) {
+			this.scrollOffset++;
+			calculateScrollBounds(this.selectedIndex, this.scrollOffset);
+		}
+
 		let rightWrapIndex = 0;
 
 		for (let row = 0; row < height; row++) {
@@ -107,10 +237,17 @@ export default class Display {
 					write(" ");
 				}
 				// Left content
-				const leftItem = this.left[row - MARGIN_VERTICAL];
+				const leftIndex = row - MARGIN_VERTICAL + this.scrollOffset;
+				const leftItem = this.left[leftIndex];
+				if (leftItem == undefined && !this.emittedNeedsData) {
+					// Needs more data to fill the whole screen!
+					this.emittedNeedsData = true;
+					this.emit("needsData");
+				}
+				const selected = this.selectedIndex == leftIndex && leftItem != undefined;
 				const leftSpace =
 					Math.floor((width - 2 * MARGIN_HORIZONTAL) / 2) - GUTTER / 2 - 4;
-				if (leftItem?.selected) {
+				if (selected) {
 					write("\u001B[1;97m>\u001B[0m \u001B[4m");
 				} else {
 					write("  ");
@@ -118,6 +255,8 @@ export default class Display {
 				col += 2;
 				if (leftItem?.bold) {
 					write("\u001B[1;97m");
+				} else {
+					write("\u001B[38;5;249m");
 				}
 				for (let i = 0; i < leftSpace; i++) {
 					if (
@@ -126,17 +265,15 @@ export default class Display {
 						leftItem.content.length > leftSpace
 					) {
 						write("\u2026");
-					} else if (i == leftItem?.content.length) {
-						write("\u001B[0m ");
+					} else if (i == leftSpace - 1) {
+						write(" \u001B[0m");
 					} else {
 						write(leftItem?.content[i] ?? " ");
 					}
 					col++;
 				}
-				if (leftItem?.selected || leftItem?.bold) {
-					write("\u001B[0m");
-				}
-				if (leftItem?.selected) {
+				write("\u001B[0m");
+				if (selected) {
 					write(" \u001B[1;97m<\u001B[0m");
 				} else {
 					write("  ");
