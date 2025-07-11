@@ -21,6 +21,7 @@ let normalPage = 1;
 let filterData: Video[];
 let filterPage = 0;
 let hardTypeFilters: string[] | null = null;
+let hardUnreadFilter = false;
 
 let data = normalData;
 let page = 1;
@@ -118,28 +119,39 @@ async function scrollToSelectedIndex() {
 
 function updateHardFilters() {
 	if (
-		Object.values(filterTypes).some((i) => i == true) &&
-		Object.values(filterTypes).some((i) => i == false)
+		(Object.values(filterTypes).some((i) => i == true) &&
+			Object.values(filterTypes).some((i) => i == false)) ||
+		filterUnread == true
 	) {
-		if (hardTypeFilters == null) {
+		if (hardTypeFilters == null && hardUnreadFilter == false) {
 			normalData = data;
 			normalPage = page;
 		}
-		hardTypeFilters = Object.entries(filterTypes)
-			.filter((e) => e[1] == true)
-			.map((e) => e[0]);
+		if (
+			Object.values(filterTypes).some((i) => i == true) &&
+			Object.values(filterTypes).some((i) => i == false)
+		) {
+			hardTypeFilters = Object.entries(filterTypes)
+				.filter((e) => e[1] == true)
+				.map((e) => e[0]);
+		} else {
+			hardTypeFilters = null;
+		}
+		hardUnreadFilter = filterUnread;
 		filterData = [];
 		filterPage = 0;
 		data = filterData;
 		page = filterPage;
 		sponsorBlockCacheIndex = 0;
 	} else if (
-		hardTypeFilters != null &&
-		(Object.values(filterTypes).every((i) => i == true) ||
-			Object.values(filterTypes).every((i) => i == false))
+		(hardTypeFilters != null &&
+			(Object.values(filterTypes).every((i) => i == true) ||
+				Object.values(filterTypes).every((i) => i == false))) ||
+		(hardUnreadFilter == true && filterUnread == false)
 	) {
 		// Disable hard type filters and return to regular data list
 		hardTypeFilters = null;
+		hardUnreadFilter = false;
 		filterData = [];
 		filterPage = 0;
 		data = normalData;
@@ -161,7 +173,8 @@ async function main() {
 		page++;
 		const newFetch = await api.fetchFeed({
 			page,
-			type: hardTypeFilters == null ? undefined : hardTypeFilters
+			type: hardTypeFilters == null ? undefined : hardTypeFilters,
+			unread: hardUnreadFilter == true ? true : undefined
 		});
 		if (newFetch.length == 0) {
 			endReached = true;
@@ -262,6 +275,10 @@ async function main() {
 							await api.markRead({ read: [selectedData.videoId] });
 							selectedData.unread = false;
 							populateVideoList();
+							if (hardTypeFilters != null || hardUnreadFilter == true) {
+								const n = normalData.find((d) => d.videoId == selectedData.videoId);
+								if (n != undefined) n.unread = false;
+							}
 						}
 						display.populateKeyLabels(["Opened!"]);
 						display.writeFrame();
@@ -290,7 +307,26 @@ async function main() {
 					case "": {
 						// Mark
 						currentInteractionChar = "m";
-						display.populateKeyLabels(["[ r Read ]", "[ u Unread ]"]);
+						display.populateKeyLabels([
+							"[ r Read ]",
+							"[ u Unread ]",
+							"[ ar All Read ]"
+						]);
+						display.writeFrame();
+						break;
+					}
+					default: {
+						clearInteractionChar(true);
+					}
+				}
+				break;
+			}
+			case "a": {
+				switch (currentInteractionChar) {
+					case "m": {
+						// Mark All [Read]
+						currentInteractionChar = "ma";
+						display.populateKeyLabels(["[ r All Read ]"]);
 						display.writeFrame();
 						break;
 					}
@@ -440,7 +476,10 @@ async function main() {
 						filterData = [];
 						filterPage = 0;
 
-						data = hardTypeFilters == null ? normalData : filterData;
+						data =
+							hardTypeFilters == null && hardUnreadFilter == false
+								? normalData
+								: filterData;
 						page = 0;
 
 						endReached = false;
@@ -466,6 +505,28 @@ async function main() {
 						if (selectedData.unread) {
 							await api.markRead({ read: [selectedData.videoId] });
 							selectedData.unread = false;
+							populateVideoList();
+							if (hardTypeFilters != null || hardUnreadFilter == true) {
+								const n = normalData.find((d) => d.videoId == selectedData.videoId);
+								if (n != undefined) n.unread = false;
+							}
+						}
+						display.writeFrame();
+						break;
+					}
+					case "ma": {
+						// Mark All Read
+						clearInteractionChar();
+						const allUnread = data.filter((v) => v.unread == true);
+						if (allUnread.length > 0) {
+							await api.markRead({ read: allUnread.map((v) => v.videoId) });
+							for (const u of allUnread) {
+								u.unread = false;
+								if (hardTypeFilters != null || hardUnreadFilter == true) {
+									const n = normalData.find((d) => d.videoId == u.videoId);
+									if (n != undefined) n.unread = false;
+								}
+							}
 							populateVideoList();
 						}
 						display.writeFrame();
@@ -508,6 +569,10 @@ async function main() {
 						if (!selectedData.unread) {
 							await api.markRead({ unread: [selectedData.videoId] });
 							selectedData.unread = true;
+							if (hardTypeFilters != null || hardUnreadFilter == true) {
+								const n = normalData.find((d) => d.videoId == selectedData.videoId);
+								if (n != undefined) n.unread = true;
+							}
 							populateVideoList();
 						}
 						display.writeFrame();
@@ -518,6 +583,7 @@ async function main() {
 						clearInteractionChar();
 						endReached = false;
 						filterUnread = !filterUnread;
+						updateHardFilters();
 						populateVideoList();
 						scrollToSelectedIndex();
 						break;
