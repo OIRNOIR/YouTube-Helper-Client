@@ -1,5 +1,4 @@
 import { type ExecException, type ExecOptions, exec } from "node:child_process";
-import { subtle as subtleCrypto } from "node:crypto";
 
 export async function execAsync(
 	command: string,
@@ -14,37 +13,6 @@ export async function execAsync(
 			resolve({ error, stdout, stderr });
 		});
 	});
-}
-
-export async function getSHA256Hash(input: string) {
-	const textAsBuffer = new TextEncoder().encode(input);
-	const hashBuffer = await subtleCrypto.digest("SHA-256", textAsBuffer);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	const hash = hashArray
-		.map((item) => item.toString(16).padStart(2, "0"))
-		.join("");
-	return hash;
-}
-
-export async function getFullVideoSponsorBlockSegments(
-	videoId: string
-): Promise<null | "sponsor" | "selfpromo" | "exclusive_access"> {
-	const hash = await getSHA256Hash(videoId);
-	const res = await fetch(
-		`https://sponsor.ajay.app/api/skipSegments/${hash.slice(0, 4)}?categories=["sponsor","selfpromo","exclusive_access"]&actionType=full`
-	);
-	const text = await res.text();
-	const json = JSON.parse(text) as {
-		videoID: string;
-		segments: {
-			category: "sponsor" | "selfpromo" | "exclusive_access";
-			votes: number;
-		}[];
-	}[];
-	const thisVideo = json.find((v) => v.videoID == videoId);
-	return (
-		thisVideo?.segments.sort((a, b) => b.votes - a.votes).at(0)?.category ?? null
-	);
 }
 
 /**

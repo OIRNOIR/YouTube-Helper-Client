@@ -11,4 +11,5 @@ export interface Video {
 	timestampMS: number;
 	isCurrentlyLive: boolean;
 	unread: boolean;
+	sponsorBlockStatus: null | "sponsor" | "selfpromo" | "exclusive_access";
 }

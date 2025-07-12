@@ -104,10 +104,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 		this.bottom = keyLabels;
 	}
 
-	populateVideoInformation(
-		video: Video | null,
-		fullVideoSponsorSegment: null | "sponsor" | "selfpromo" | "exclusive_access"
-	) {
+	populateVideoInformation(video: Video | null) {
 		this.right = [];
 		if (video == null) return;
 		const videoTypeFormatting =
@@ -131,7 +128,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 			formatting: [videoTypeFormatting, "\u001B[32m"],
 			justify: true
 		});
-		switch (fullVideoSponsorSegment) {
+		switch (video.sponsorBlockStatus) {
 			case "sponsor": {
 				this.right.push({
 					content: "Full Video Sponsor",

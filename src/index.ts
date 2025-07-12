@@ -6,7 +6,7 @@ import Display from "./Display.ts";
 import Downloader from "./Downloader.ts";
 import type { ConfigFile } from "./types/ConfigFile.ts";
 import type { Video } from "./types/Video.ts";
-import { execAsync, getFullVideoSponsorBlockSegments } from "./util.ts";
+import { execAsync } from "./util.ts";
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
@@ -33,20 +33,12 @@ let page = 1;
 
 let endReached = false;
 
-let sponsorBlockCacheIndex = 0;
-const sponsorBlockCache = new Map<
-	string,
-	null | "sponsor" | "selfpromo" | "exclusive_access"
->();
-
 let filterUnread = false;
 const filterTypes = {
 	video: true,
 	short: true,
 	stream: true
 };
-
-const SPONSOR_BLOCK_CACHE_BUFFER = 10;
 
 function getFilteredData(dataInput?: Video[]) {
 	let filtered = dataInput ?? data;
@@ -63,27 +55,6 @@ function getFilteredData(dataInput?: Video[]) {
 
 function populateVideoList() {
 	display.populateVideoList(getFilteredData());
-}
-
-async function cacheSponsorBlockData(targetIndex: number) {
-	for (let i = 0; i <= targetIndex; i++) {
-		const item = data[i];
-		if (item != null) {
-			await sbGet(item.videoId);
-			if (i > sponsorBlockCacheIndex) sponsorBlockCacheIndex = i;
-		}
-	}
-}
-
-async function sbGet(
-	videoId: string
-): Promise<null | "sponsor" | "selfpromo" | "exclusive_access"> {
-	if (sponsorBlockCache.has(videoId)) {
-		return sponsorBlockCache.get(videoId) ?? null;
-	}
-	const segment = await getFullVideoSponsorBlockSegments(videoId);
-	sponsorBlockCache.set(videoId, segment);
-	return segment;
 }
 
 function refreshKeyLabels() {
@@ -121,17 +92,13 @@ function clearInteractionChar(write = false) {
 	}
 }
 
-async function scrollToSelectedIndex() {
+function scrollToSelectedIndex() {
 	const foundDataIndex = data.findIndex(
 		(d) => d.videoId == display.left[display.selectedIndex]?.videoId
 	);
 	const video = foundDataIndex == -1 ? null : (data[foundDataIndex] ?? null);
-	const sbData = video != null ? await sbGet(video.videoId) : null;
-	display.populateVideoInformation(video, sbData);
+	display.populateVideoInformation(video);
 	display.writeFrame();
-	if (foundDataIndex + SPONSOR_BLOCK_CACHE_BUFFER > sponsorBlockCacheIndex) {
-		await cacheSponsorBlockData(foundDataIndex + SPONSOR_BLOCK_CACHE_BUFFER);
-	}
 }
 
 function updateHardFilters() {
@@ -159,7 +126,6 @@ function updateHardFilters() {
 		filterPage = 0;
 		data = filterData;
 		page = filterPage;
-		sponsorBlockCacheIndex = 0;
 	} else if (
 		(hardTypeFilters != null &&
 			(Object.values(filterTypes).every((i) => i == true) ||
@@ -173,7 +139,6 @@ function updateHardFilters() {
 		filterPage = 0;
 		data = normalData;
 		page = normalPage;
-		sponsorBlockCacheIndex = 0;
 	}
 }
 
@@ -224,19 +189,18 @@ async function main() {
 		if (display.right.length == 0) {
 			const selectedItem = data[0];
 			if (selectedItem != undefined) {
-				const sbInfo = await sbGet(selectedItem.videoId);
-				display.populateVideoInformation(selectedItem, sbInfo);
+				display.populateVideoInformation(selectedItem);
 			}
 		}
 		display.writeFrame();
 	});
 
 	populateVideoList();
-	display.populateVideoInformation(data[0] ?? null, null);
+	display.populateVideoInformation(data[0] ?? null);
 
 	display.writeFrame();
 
-	async function upKey() {
+	function upKey() {
 		if (display.downloadQueueOpen) {
 			if (display.downloadQueueSelectedIndex > 0) {
 				display.downloadQueueSelectedIndex--;
@@ -245,12 +209,12 @@ async function main() {
 		} else {
 			if (display.selectedIndex > 0) {
 				display.selectedIndex--;
-				await scrollToSelectedIndex();
+				scrollToSelectedIndex();
 			}
 		}
 	}
 
-	async function downKey() {
+	function downKey() {
 		if (display.downloadQueueOpen) {
 			if (
 				display.downloadQueueSelectedIndex <
@@ -262,7 +226,7 @@ async function main() {
 		} else {
 			if (display.selectedIndex < display.left.length - 1) {
 				display.selectedIndex++;
-				await scrollToSelectedIndex();
+				scrollToSelectedIndex();
 			}
 		}
 	}
@@ -427,7 +391,7 @@ async function main() {
 				case "j": {
 					switch (currentInteractionChar) {
 						case "": {
-							await downKey();
+							downKey();
 							break;
 						}
 						default: {
@@ -439,7 +403,7 @@ async function main() {
 				case "k": {
 					switch (currentInteractionChar) {
 						case "": {
-							await upKey();
+							upKey();
 							break;
 						}
 						default: {
@@ -454,12 +418,12 @@ async function main() {
 						switch (keyString.charCodeAt(2)) {
 							case 65: {
 								// Up
-								await upKey();
+								upKey();
 								break;
 							}
 							case 66: {
 								// Down
-								await downKey();
+								downKey();
 								break;
 							}
 						}
@@ -510,7 +474,7 @@ async function main() {
 						case "g": {
 							clearInteractionChar();
 							display.selectedIndex = 0;
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						default: {
@@ -567,7 +531,7 @@ async function main() {
 								}
 							}
 							display.populateKeyLabels(["Opened!"]);
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							refreshKeyLabels();
 							break;
 						}
@@ -663,7 +627,7 @@ async function main() {
 							filterTypes.stream = !filterTypes.stream;
 							updateHardFilters();
 							populateVideoList();
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						case "fo": {
@@ -678,7 +642,7 @@ async function main() {
 							filterTypes.stream = true;
 							updateHardFilters();
 							populateVideoList();
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						default: {
@@ -696,7 +660,7 @@ async function main() {
 							filterTypes.video = !filterTypes.video;
 							updateHardFilters();
 							populateVideoList();
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						case "fo": {
@@ -711,7 +675,7 @@ async function main() {
 							filterTypes.video = true;
 							updateHardFilters();
 							populateVideoList();
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						default: {
@@ -729,7 +693,7 @@ async function main() {
 							filterTypes.short = !filterTypes.short;
 							updateHardFilters();
 							populateVideoList();
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						case "fo": {
@@ -744,7 +708,7 @@ async function main() {
 							filterTypes.short = true;
 							updateHardFilters();
 							populateVideoList();
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						default: {
@@ -761,8 +725,7 @@ async function main() {
 								(d) => d.videoId == display.left[display.selectedIndex]?.videoId
 							);
 							if (currentlySelectedOldData != undefined) {
-								const sbData = await sbGet(currentlySelectedOldData.videoId);
-								display.populateVideoInformation(currentlySelectedOldData, sbData);
+								display.populateVideoInformation(currentlySelectedOldData);
 							}
 							normalData = [];
 							normalPage = 0;
@@ -776,8 +739,6 @@ async function main() {
 							page = 0;
 
 							endReached = false;
-
-							sponsorBlockCacheIndex = 0;
 
 							populateVideoList();
 							display.writeFrame();
@@ -804,7 +765,7 @@ async function main() {
 									if (n != undefined) n.unread = false;
 								}
 							}
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						case "ma": {
@@ -822,7 +783,7 @@ async function main() {
 								}
 								populateVideoList();
 							}
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						case "f": {
@@ -869,7 +830,7 @@ async function main() {
 								}
 								populateVideoList();
 							}
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						case "f": {
@@ -879,7 +840,7 @@ async function main() {
 							filterUnread = !filterUnread;
 							updateHardFilters();
 							populateVideoList();
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							break;
 						}
 						default: {
@@ -891,7 +852,7 @@ async function main() {
 				case "j": {
 					switch (currentInteractionChar) {
 						case "": {
-							await downKey();
+							downKey();
 							break;
 						}
 						default: {
@@ -903,7 +864,7 @@ async function main() {
 				case "k": {
 					switch (currentInteractionChar) {
 						case "": {
-							await upKey();
+							upKey();
 							break;
 						}
 						default: {
@@ -937,7 +898,7 @@ async function main() {
 							}
 							updateDownloaderBar();
 							display.populateKeyLabels(["Added to download queue"]);
-							await scrollToSelectedIndex();
+							scrollToSelectedIndex();
 							refreshKeyLabels();
 							break;
 						}
@@ -971,12 +932,12 @@ async function main() {
 						switch (keyString.charCodeAt(2)) {
 							case 65: {
 								// Up
-								await upKey();
+								upKey();
 								break;
 							}
 							case 66: {
 								// Down
-								await downKey();
+								downKey();
 								break;
 							}
 						}
@@ -989,17 +950,6 @@ async function main() {
 	process.stdout.on("resize", () => {
 		display.writeFrame();
 	});
-
-	const currentSponsorBlockInfo =
-		data[0] != undefined ? await sbGet(data[0].videoId) : null;
-	if (display.selectedIndex == 0) {
-		display.populateVideoInformation(data[0] ?? null, currentSponsorBlockInfo);
-		display.writeFrame();
-	}
-
-	if (data[0] != undefined) {
-		await cacheSponsorBlockData(SPONSOR_BLOCK_CACHE_BUFFER);
-	}
 }
 
 void main();
