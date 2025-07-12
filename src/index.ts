@@ -798,7 +798,7 @@ async function main() {
 							filterUnread = false;
 							updateHardFilters();
 							populateVideoList();
-							display.writeFrame();
+							scrollToSelectedIndex();
 							break;
 						}
 						default: {
