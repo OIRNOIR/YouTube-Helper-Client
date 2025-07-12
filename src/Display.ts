@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import emojiRegex from "emoji-regex";
+import type { DownloadVideo } from "./Downloader";
 import type { Video } from "./types/Video";
 import { msToMostSignificantWord, msToShort } from "./util";
 
@@ -29,21 +30,31 @@ export default class Display extends EventEmitter<DisplayEvents> {
 	selectedIndex: number;
 	private emittedNeedsData: boolean;
 	scrollOffset: number;
+
 	downloadQueueTotal: number;
 	downloadQueueCompleted: number;
 	downloadQueueError: boolean;
+	displayDownloadQueue: DownloadVideo[];
+	downloadQueueOpen: boolean;
+	downloadQueueSelectedIndex: number;
+	downloadQueueScrollOffset: number;
 
 	constructor() {
 		super();
 		this.left = [];
 		this.right = [];
 		this.bottom = [];
-		this.downloadQueueTotal = 0;
-		this.downloadQueueCompleted = 0;
-		this.downloadQueueError = false;
 		this.selectedIndex = 0;
 		this.emittedNeedsData = false;
 		this.scrollOffset = 0;
+
+		this.downloadQueueTotal = 0;
+		this.downloadQueueCompleted = 0;
+		this.downloadQueueError = false;
+		this.displayDownloadQueue = [];
+		this.downloadQueueOpen = false;
+		this.downloadQueueSelectedIndex = 0;
+		this.downloadQueueScrollOffset = 0;
 	}
 
 	populateVideoList(data: Video[]) {
@@ -289,131 +300,202 @@ export default class Display extends EventEmitter<DisplayEvents> {
 				for (; col < MARGIN_HORIZONTAL; col++) {
 					write(" ");
 				}
-				// Left content
-				const leftIndex = row - MARGIN_VERTICAL + this.scrollOffset;
-				const leftItem = this.left[leftIndex];
-				if (leftItem == undefined && !this.emittedNeedsData) {
-					// Needs more data to fill the whole screen!
-					this.emittedNeedsData = true;
-					this.emit("needsData");
-				}
-				const selected = this.selectedIndex == leftIndex && leftItem != undefined;
-				const leftSpace =
-					Math.floor((width - 2 * MARGIN_HORIZONTAL) / 2) - GUTTER / 2 - 4;
-				if (selected) {
-					write("\u001B[1;97m>\u001B[0m \u001B[4m");
-				} else {
-					write("  ");
-				}
-				col += 2;
-				if (leftItem?.bold) {
-					write("\u001B[1;97m");
-				} else {
-					write("\u001B[38;5;249m");
-				}
-				for (let i = 0; i < leftSpace; i++) {
-					if (
-						leftItem != undefined &&
-						i == leftSpace - 1 &&
-						leftItem.content.length > leftSpace
-					) {
-						write("\u2026");
-					} else if (i == leftSpace - 1) {
-						write(" \u001B[0m");
-					} else {
-						write(leftItem?.content[i] ?? " ");
+				if (this.downloadQueueOpen) {
+					const index = row - MARGIN_VERTICAL + this.downloadQueueScrollOffset;
+					const item = this.displayDownloadQueue[index];
+					if (item == undefined) {
+						write("\n");
+						continue;
 					}
-					col++;
-				}
-				write("\u001B[0m");
-				if (selected) {
-					write(" \u001B[1;97m<\u001B[0m");
-				} else {
-					write("  ");
-				}
-				col += 2;
-
-				// Gutter
-				for (let i = 0; i < GUTTER; i++) {
-					write(" ");
-					col++;
-				}
-
-				// Right content
-				let rightItem = this.right[row - MARGIN_VERTICAL];
-				if (rightItem == undefined && this.right[this.right.length - 1]?.wrap) {
-					rightItem = this.right[this.right.length - 1];
-				}
-				if (
-					rightItem != undefined &&
-					(!rightItem.wrap || rightWrapIndex < rightItem.content.length)
-				) {
-					const rightSpace =
-						Math.floor((width - 2 * MARGIN_HORIZONTAL) / 2) - GUTTER / 2;
-					if (rightItem.justify) {
-						const formattingOne = rightItem.formatting?.[0];
-						const formattingTwo = rightItem.formatting?.[1];
-						if (formattingOne != undefined) {
-							write(formattingOne);
-						}
-						for (let i = 0; i < rightSpace; i++) {
-							if (col >= width - MARGIN_HORIZONTAL) break;
-							if (rightItem.content[i] == "\t") {
-								write("\u001B[0m");
-								const spaceRemaining = width - MARGIN_HORIZONTAL - col;
-								const padding =
-									spaceRemaining - (rightItem.content.split("\t")[1]?.length ?? 0);
-								if (padding > 0) {
-									for (let j = 0; j < padding; j++) {
-										write(" ");
-										col++;
-									}
-								}
-								if (formattingTwo != undefined) {
-									write(formattingTwo);
-								}
-							} else {
-								write(rightItem.content[i] ?? " ");
-								col++;
-							}
-						}
+					const selected =
+						this.downloadQueueSelectedIndex == index && item != undefined;
+					if (selected) {
+						write("\u001B[1;97m>\u001B[0m \u001B[4m");
 					} else {
-						const formattingOne = rightItem.formatting?.[0];
-						if (formattingOne != undefined) {
-							write(formattingOne);
+						write("  ");
+					}
+					col += 2;
+					let statusText = "";
+					let statusFormatting = "";
+					switch (item.status) {
+						case "queue": {
+							statusText = "";
+							statusFormatting = "\u001B[38;5;249m";
+							break;
 						}
-						if (rightItem.center) {
-							const padding = Math.floor((rightSpace - rightItem.content.length) / 2);
-							for (let i = 0; i < padding; i++) {
-								write(" ");
-								col++;
-							}
+						case "progress": {
+							statusText = "Working";
+							statusFormatting = "\u001B[38;5;226m";
+							break;
 						}
-						if (rightItem.wrap) {
-							let newline = false;
-							for (let i = 0; i < rightSpace; i++) {
-								if (col >= width - MARGIN_HORIZONTAL) break;
-								const char = rightItem.content[i + rightWrapIndex];
-								if (char == "\n") {
-									newline = true;
-									rightWrapIndex += i + 1;
-									break;
-								}
-								write(char ?? " ");
-								col++;
-							}
-							if (!newline) {
-								rightWrapIndex += rightSpace;
-							}
+						case "done": {
+							statusText = "Success";
+							statusFormatting = "\u001B[38;5;46m";
+							break;
+						}
+						case "error": {
+							statusText = "ERROR";
+							statusFormatting = "\u001B[38;5;196m";
+							break;
+						}
+						case "silenced": {
+							statusText = "ERROR";
+							statusFormatting = "\u001B[38;5;124m";
+							break;
+						}
+					}
+					while (statusText.length < 7) {
+						statusText = `${statusText} `;
+					}
+					statusText = `[${statusText}] `;
+					write(statusFormatting);
+					write(statusText);
+					col += statusText.length;
+					const space = width - MARGIN_HORIZONTAL - col - 2;
+					for (let i = 0; i < space; i++) {
+						if (i == space - 1 && item.title.length > space) {
+							write("\u2026");
+						} else if (i == space - 1) {
+							write(" \u001B[0m");
 						} else {
-							for (let i = 0; i < rightSpace; i++) {
-								if (col >= width - MARGIN_HORIZONTAL) break;
-								write(rightItem.content[i] ?? " ");
-								col++;
-							}
+							write(item.title[i] ?? " ");
 						}
+						col++;
 					}
 					write("\u001B[0m");
+					if (selected) {
+						write(" \u001B[1;97m<\u001B[0m");
+					} else {
+						write("  ");
+					}
+					col += 2;
+				} else {
+					// Left content
+					const leftIndex = row - MARGIN_VERTICAL + this.scrollOffset;
+					const leftItem = this.left[leftIndex];
+					if (leftItem == undefined && !this.emittedNeedsData) {
+						// Needs more data to fill the whole screen!
+						this.emittedNeedsData = true;
+						this.emit("needsData");
+					}
+					const selected = this.selectedIndex == leftIndex && leftItem != undefined;
+					const leftSpace =
+						Math.floor((width - 2 * MARGIN_HORIZONTAL) / 2) - GUTTER / 2 - 4;
+					if (selected) {
+						write("\u001B[1;97m>\u001B[0m \u001B[4m");
+					} else {
+						write("  ");
+					}
+					col += 2;
+					if (leftItem?.bold) {
+						write("\u001B[1;97m");
+					} else {
+						write("\u001B[38;5;249m");
+					}
+					for (let i = 0; i < leftSpace; i++) {
+						if (
+							leftItem != undefined &&
+							i == leftSpace - 1 &&
+							leftItem.content.length > leftSpace
+						) {
+							write("\u2026");
+						} else if (i == leftSpace - 1) {
+							write(" \u001B[0m");
+						} else {
+							write(leftItem?.content[i] ?? " ");
+						}
+						col++;
+					}
+					write("\u001B[0m");
+					if (selected) {
+						write(" \u001B[1;97m<\u001B[0m");
+					} else {
+						write("  ");
+					}
+					col += 2;
+
+					// Gutter
+					for (let i = 0; i < GUTTER; i++) {
+						write(" ");
+						col++;
+					}
+
+					// Right content
+					let rightItem = this.right[row - MARGIN_VERTICAL];
+					if (rightItem == undefined && this.right[this.right.length - 1]?.wrap) {
+						rightItem = this.right[this.right.length - 1];
+					}
+					if (
+						rightItem != undefined &&
+						(!rightItem.wrap || rightWrapIndex < rightItem.content.length)
+					) {
+						const rightSpace =
+							Math.floor((width - 2 * MARGIN_HORIZONTAL) / 2) - GUTTER / 2;
+						if (rightItem.justify) {
+							const formattingOne = rightItem.formatting?.[0];
+							const formattingTwo = rightItem.formatting?.[1];
+							if (formattingOne != undefined) {
+								write(formattingOne);
+							}
+							for (let i = 0; i < rightSpace; i++) {
+								if (col >= width - MARGIN_HORIZONTAL) break;
+								if (rightItem.content[i] == "\t") {
+									write("\u001B[0m");
+									const spaceRemaining = width - MARGIN_HORIZONTAL - col;
+									const padding =
+										spaceRemaining - (rightItem.content.split("\t")[1]?.length ?? 0);
+									if (padding > 0) {
+										for (let j = 0; j < padding; j++) {
+											write(" ");
+											col++;
+										}
+									}
+									if (formattingTwo != undefined) {
+										write(formattingTwo);
+									}
+								} else {
+									write(rightItem.content[i] ?? " ");
+									col++;
+								}
+							}
+						} else {
+							const formattingOne = rightItem.formatting?.[0];
+							if (formattingOne != undefined) {
+								write(formattingOne);
+							}
+							if (rightItem.center) {
+								const padding = Math.floor((rightSpace - rightItem.content.length) / 2);
+								for (let i = 0; i < padding; i++) {
+									write(" ");
+									col++;
+								}
+							}
+							if (rightItem.wrap) {
+								let newline = false;
+								for (let i = 0; i < rightSpace; i++) {
+									if (col >= width - MARGIN_HORIZONTAL) break;
+									const char = rightItem.content[i + rightWrapIndex];
+									if (char == "\n") {
+										newline = true;
+										rightWrapIndex += i + 1;
+										break;
+									}
+									write(char ?? " ");
+									col++;
+								}
+								if (!newline) {
+									rightWrapIndex += rightSpace;
+								}
+							} else {
+								for (let i = 0; i < rightSpace; i++) {
+									if (col >= width - MARGIN_HORIZONTAL) break;
+									write(rightItem.content[i] ?? " ");
+									col++;
+								}
+							}
+						}
+						write("\u001B[0m");
+					}
 				}
 				write("\n");
 			}
