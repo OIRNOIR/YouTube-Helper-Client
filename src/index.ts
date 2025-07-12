@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import clipboard from "clipboardy";
-import { API } from "./api.ts";
+import { API } from "./API.ts";
 import Display from "./Display.ts";
 import type { ConfigFile } from "./types/ConfigFile.ts";
 import type { Video } from "./types/Video.ts";
@@ -485,6 +485,13 @@ async function main() {
 				switch (currentInteractionChar) {
 					case "": {
 						// Refresh
+						const currentlySelectedOldData = data.find(
+							(d) => d.videoId == display.left[display.selectedIndex]?.videoId
+						);
+						if (currentlySelectedOldData != undefined) {
+							const sbData = await sbGet(currentlySelectedOldData.videoId);
+							display.populateVideoInformation(currentlySelectedOldData, sbData);
+						}
 						normalData = [];
 						normalPage = 0;
 						filterData = [];

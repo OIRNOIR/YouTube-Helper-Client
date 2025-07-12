@@ -29,12 +29,18 @@ export default class Display extends EventEmitter<DisplayEvents> {
 	selectedIndex: number;
 	private emittedNeedsData: boolean;
 	scrollOffset: number;
+	downloadQueueTotal: number;
+	downloadQueueCompleted: number;
+	downloadQueueError: boolean;
 
 	constructor() {
 		super();
 		this.left = [];
 		this.right = [];
 		this.bottom = [];
+		this.downloadQueueTotal = 0;
+		this.downloadQueueCompleted = 0;
+		this.downloadQueueError = false;
 		this.selectedIndex = 0;
 		this.emittedNeedsData = false;
 		this.scrollOffset = 0;
@@ -179,7 +185,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 
 		function calculateScrollBounds(selectedIndex: number, scrollOffset: number) {
 			screenScrollTop = selectedIndex - scrollOffset;
-			screenScrollBottom = height - MARGIN_VERTICAL * 3 - 2 - screenScrollTop;
+			screenScrollBottom = height - MARGIN_VERTICAL * 3 - 3 - screenScrollTop;
 		}
 
 		calculateScrollBounds(this.selectedIndex, this.scrollOffset);
@@ -199,6 +205,53 @@ export default class Display extends EventEmitter<DisplayEvents> {
 		for (let row = 0; row < height; row++) {
 			let col = 0;
 			if (row == height - MARGIN_VERTICAL - 1) {
+				// Download Queue Indicator
+				for (; col < MARGIN_HORIZONTAL; col++) {
+					write(" ");
+				}
+				let bottomContent = "";
+				let bottomLength = 2;
+				if (this.downloadQueueTotal == 0) {
+					bottomContent = "[]";
+				} else {
+					const space = width - 2 * MARGIN_HORIZONTAL;
+					// Use two-thirds of the space, rounded
+					const toUse = Math.round((space * 2) / 3);
+					while (bottomContent.length < toUse - 2) {
+						bottomContent = `${bottomContent} `;
+					}
+					bottomLength = bottomContent.length + 2;
+					const shareComplete =
+						this.downloadQueueCompleted / this.downloadQueueTotal;
+					const markDone = Math.round(shareComplete * bottomContent.length);
+					const doneEscapeSequence = this.downloadQueueError
+						? "\u001B[48;5;196m"
+						: "\u001B[48;5;231m";
+					if (markDone == 0) {
+						bottomContent = `\u001B[48;5;16m${bottomContent}\u001B[0m`;
+					} else if (shareComplete == 1) {
+						bottomContent = `${doneEscapeSequence}${bottomContent}\u001B[0m`;
+					} else {
+						let done = "";
+						let togo = "";
+						while (done.length < markDone) {
+							done = `${done} `;
+						}
+						while (done.length + togo.length < bottomContent.length) {
+							togo = `${togo} `;
+						}
+						bottomContent = `${doneEscapeSequence}${done}\u001B[48;5;16m${togo}\u001B[0m`;
+					}
+					bottomContent = `[${bottomContent}]`;
+				}
+				const extra = width - 2 * MARGIN_HORIZONTAL - bottomLength;
+				const padding = Math.floor(extra / 2);
+				for (let i = 0; i < padding; i++) {
+					write(" ");
+					col++;
+				}
+				write(`${bottomContent}\n`);
+			} else if (row == height - MARGIN_VERTICAL - 2) {
 				// Bottom row
 				for (; col < MARGIN_HORIZONTAL; col++) {
 					write(" ");
@@ -226,7 +279,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 				write(`${bottomContent}\n`);
 			} else if (
 				row < MARGIN_VERTICAL ||
-				(row > height - (2 * MARGIN_VERTICAL + 2) && row < height - 1)
+				(row > height - (2 * MARGIN_VERTICAL + 3) && row < height - 1)
 			) {
 				write("\n");
 			} else if (row == height - 1) {
