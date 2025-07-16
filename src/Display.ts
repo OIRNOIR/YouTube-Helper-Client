@@ -396,7 +396,11 @@ export default class Display extends EventEmitter<DisplayEvents> {
 							leftItem.content.length > leftSpace
 						) {
 							write("\u2026");
-						} else if (i == leftSpace - 1) {
+						} else if (
+							i == leftSpace - 1 &&
+							leftItem != undefined &&
+							leftItem.content.length < leftSpace
+						) {
 							write(" \u001B[0m");
 						} else {
 							write(leftItem?.content[i] ?? " ");
