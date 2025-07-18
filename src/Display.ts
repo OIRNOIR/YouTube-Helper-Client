@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { stringWidth } from "bun";
 import emojiRegex from "emoji-regex";
 import type { DownloadVideo } from "./Downloader";
 import type { Video } from "./types/Video";
@@ -349,15 +350,33 @@ export default class Display extends EventEmitter<DisplayEvents> {
 					write(statusText);
 					col += statusText.length;
 					const space = width - MARGIN_HORIZONTAL - col - 2;
-					for (let i = 0; i < space; i++) {
-						if (i == space - 1 && item.title.length > space) {
+					// si tracks visual width, i tracks character in string
+					let si = 0;
+					for (let i = 0; i < space && si < space; i++) {
+						const currentChar = item.title[i];
+						if (
+							currentChar != undefined &&
+							stringWidth(currentChar) > 1 &&
+							si == space - 2 &&
+							stringWidth(item.title) > space
+						) {
+							write(" \u2026");
+							si++;
+							col++;
+						} else if (si == space - 1 && stringWidth(item.title) > space) {
 							write("\u2026");
-						} else if (i == space - 1) {
+						} else if (si == space - 1) {
 							write(" \u001B[0m");
 						} else {
-							write(item.title[i] ?? " ");
+							write(currentChar ?? " ");
+							if (currentChar != undefined && stringWidth(currentChar) > 1) {
+								const diff = stringWidth(currentChar) - 1;
+								col += diff;
+								si += diff;
+							}
 						}
 						col++;
+						si++;
 					}
 					write("\u001B[0m");
 					if (selected) {
@@ -389,23 +408,42 @@ export default class Display extends EventEmitter<DisplayEvents> {
 					} else {
 						write("\u001B[38;5;249m");
 					}
-					for (let i = 0; i < leftSpace; i++) {
+					// si tracks visual width, i tracks character in string
+					let siLeft = 0;
+					for (let i = 0; i < leftSpace && siLeft < leftSpace; i++) {
+						const currentChar = leftItem?.content[i];
 						if (
 							leftItem != undefined &&
-							i == leftSpace - 1 &&
-							leftItem.content.length > leftSpace
+							currentChar != undefined &&
+							stringWidth(currentChar) > 1 &&
+							siLeft == leftSpace - 2 &&
+							stringWidth(leftItem.content) > leftSpace
+						) {
+							write(" \u2026");
+							siLeft++;
+							col++;
+						} else if (
+							leftItem != undefined &&
+							siLeft == leftSpace - 1 &&
+							stringWidth(leftItem.content) > leftSpace
 						) {
 							write("\u2026");
 						} else if (
-							i == leftSpace - 1 &&
+							siLeft == leftSpace - 1 &&
 							leftItem != undefined &&
-							leftItem.content.length < leftSpace
+							stringWidth(leftItem.content) < leftSpace
 						) {
 							write(" \u001B[0m");
 						} else {
-							write(leftItem?.content[i] ?? " ");
+							write(currentChar ?? " ");
+							if (currentChar != undefined && stringWidth(currentChar) > 1) {
+								const diff = stringWidth(currentChar) - 1;
+								col += diff;
+								siLeft += diff;
+							}
 						}
 						col++;
+						siLeft++;
 					}
 					write("\u001B[0m");
 					if (selected) {
@@ -438,13 +476,14 @@ export default class Display extends EventEmitter<DisplayEvents> {
 							if (formattingOne != undefined) {
 								write(formattingOne);
 							}
-							for (let i = 0; i < rightSpace; i++) {
+							for (let i = 0; i <= rightSpace; i++) {
 								if (col >= width - MARGIN_HORIZONTAL) break;
-								if (rightItem.content[i] == "\t") {
+								const currentChar = rightItem.content[i];
+								if (currentChar == "\t") {
 									write("\u001B[0m");
 									const spaceRemaining = width - MARGIN_HORIZONTAL - col;
 									const padding =
-										spaceRemaining - (rightItem.content.split("\t")[1]?.length ?? 0);
+										spaceRemaining - stringWidth(rightItem.content.split("\t")[1] ?? "");
 									if (padding > 0) {
 										for (let j = 0; j < padding; j++) {
 											write(" ");
@@ -455,8 +494,15 @@ export default class Display extends EventEmitter<DisplayEvents> {
 										write(formattingTwo);
 									}
 								} else {
-									write(rightItem.content[i] ?? " ");
+									write(currentChar ?? " ");
 									col++;
+									if (currentChar != undefined && stringWidth(currentChar) > 1) {
+										const diff = stringWidth(currentChar) - 1;
+										col += diff;
+										if (col == width - MARGIN_HORIZONTAL - 1) {
+											break;
+										}
+									}
 								}
 							}
 						} else {
@@ -465,7 +511,9 @@ export default class Display extends EventEmitter<DisplayEvents> {
 								write(formattingOne);
 							}
 							if (rightItem.center) {
-								const padding = Math.floor((rightSpace - rightItem.content.length) / 2);
+								const padding = Math.floor(
+									(rightSpace - stringWidth(rightItem.content)) / 2
+								);
 								for (let i = 0; i < padding; i++) {
 									write(" ");
 									col++;
@@ -473,7 +521,11 @@ export default class Display extends EventEmitter<DisplayEvents> {
 							}
 							if (rightItem.wrap) {
 								let newline = false;
-								for (let i = 0; i < rightSpace; i++) {
+								// si tracks visual width, i tracks character in string
+								let si = 0;
+								let finalI = 0;
+								for (let i = 0; i <= rightSpace && si <= rightSpace; i++) {
+									finalI = i;
 									if (col >= width - MARGIN_HORIZONTAL) break;
 									const char = rightItem.content[i + rightWrapIndex];
 									if (char == "\n") {
@@ -483,15 +535,36 @@ export default class Display extends EventEmitter<DisplayEvents> {
 									}
 									write(char ?? " ");
 									col++;
+									si++;
+									finalI++;
+									if (char != undefined && stringWidth(char) > 1) {
+										const diff = stringWidth(char) - 1;
+										col += diff;
+										si += diff;
+										if (col == width - MARGIN_HORIZONTAL - 1) {
+											break;
+										}
+									}
 								}
 								if (!newline) {
-									rightWrapIndex += rightSpace;
+									rightWrapIndex += finalI;
 								}
 							} else {
-								for (let i = 0; i < rightSpace; i++) {
+								for (let i = 0; i <= rightSpace; i++) {
 									if (col >= width - MARGIN_HORIZONTAL) break;
-									write(rightItem.content[i] ?? " ");
+									const char = rightItem.content[i];
+									if (char == "\n") {
+										break;
+									}
+									write(char ?? " ");
 									col++;
+									if (char != undefined && stringWidth(char) > 1) {
+										const diff = stringWidth(char) - 1;
+										col += diff;
+										if (col == width - MARGIN_HORIZONTAL - 1) {
+											break;
+										}
+									}
 								}
 							}
 						}
