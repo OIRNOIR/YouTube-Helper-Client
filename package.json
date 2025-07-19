@@ -14,7 +14,7 @@
 		"typecheck": "bunx tsc --noEmit"
 	},
 	"dependencies": {
-		"@types/bun": "1.2.18",
+		"@types/bun": "1.2.19",
 		"clipboardy": "4.0.0",
 		"emoji-regex": "10.4.0"
 	},
