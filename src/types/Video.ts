@@ -9,6 +9,7 @@ export interface Video {
 	username: string;
 	channelId: string;
 	timestampMS: number;
+	date: string;
 	isCurrentlyLive: boolean;
 	unread: boolean;
 	sponsorBlockStatus: null | "sponsor" | "selfpromo" | "exclusive_access";
