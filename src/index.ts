@@ -64,6 +64,7 @@ function refreshKeyLabels() {
 			"[ c Retry w/ Cookie ]",
 			"[ l View Logs (messy) ]",
 			"[ e Exit Queue ]",
+			"[ d Delete ]",
 			"[ gg Top ]",
 			"[ q Quit ]"
 		]);
@@ -380,6 +381,39 @@ async function main() {
 							Display.clearScreen();
 							process.stdout.write(selectedData.stdout);
 							process.stdout.write("\nPlease press e to exit.");
+							break;
+						}
+						default: {
+							clearInteractionChar(true);
+						}
+					}
+					break;
+				}
+				case "d": {
+					switch (currentInteractionChar) {
+						case "": {
+							// Delete from queue
+							currentInteractionChar = "l";
+							const selectedData =
+								display.displayDownloadQueue[display.downloadQueueSelectedIndex];
+							if (selectedData == undefined) {
+								display.populateKeyLabels(["Could not find that video"]);
+								display.writeFrame();
+								refreshKeyLabels();
+								break;
+							}
+							const result = downloader.removeItem(display.downloadQueueSelectedIndex);
+							if (result) {
+								updateDownloaderBar();
+								display.populateKeyLabels(["Removed from download queue"]);
+								display.writeFrame();
+								refreshKeyLabels();
+							} else {
+								updateDownloaderBar();
+								display.populateKeyLabels(["Failed to remove from download queue"]);
+								display.writeFrame();
+								refreshKeyLabels();
+							}
 							break;
 						}
 						default: {

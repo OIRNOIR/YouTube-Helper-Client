@@ -112,4 +112,13 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 			});
 		}
 	}
+
+	removeItem(index: number) {
+		const item = this.queue[index];
+		if (item != undefined && item.status == "queue") {
+			this.queue.splice(index, 1);
+			return true;
+		}
+		return false;
+	}
 }
