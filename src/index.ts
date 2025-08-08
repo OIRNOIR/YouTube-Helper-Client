@@ -25,8 +25,21 @@ let normalData: Video[] = [];
 let normalPage = 1;
 let filterData: Video[];
 let filterPage = 0;
-let hardTypeFilters: string[] | null = null;
-let hardUnreadFilter = false;
+
+function serializeTypeFilters(): string[] {
+	if (
+		Object.values(filterTypes).some((i) => i == true) &&
+		Object.values(filterTypes).some((i) => i == false)
+	) {
+		return Object.entries(filterTypes)
+			.filter((e) => e[1] == true)
+			.map((e) => e[0]);
+	}
+	return [];
+}
+
+let usingFilterData = false;
+let searchQuery: string | null = null;
 
 let data = normalData;
 let page = 1;
@@ -77,6 +90,7 @@ function refreshKeyLabels() {
 			"[ m Mark ]",
 			"[ r Refresh ]",
 			"[ e DL Queue ]",
+			"[ / Search ]",
 			"[ gg Top ]",
 			"[ q Quit ]"
 		]);
@@ -106,36 +120,21 @@ function updateHardFilters() {
 	if (
 		(Object.values(filterTypes).some((i) => i == true) &&
 			Object.values(filterTypes).some((i) => i == false)) ||
-		filterUnread == true
+		filterUnread == true ||
+		searchQuery != null
 	) {
-		if (hardTypeFilters == null && hardUnreadFilter == false) {
+		if (!usingFilterData) {
 			normalData = data;
 			normalPage = page;
 		}
-		if (
-			Object.values(filterTypes).some((i) => i == true) &&
-			Object.values(filterTypes).some((i) => i == false)
-		) {
-			hardTypeFilters = Object.entries(filterTypes)
-				.filter((e) => e[1] == true)
-				.map((e) => e[0]);
-		} else {
-			hardTypeFilters = null;
-		}
-		hardUnreadFilter = filterUnread;
 		filterData = [];
 		filterPage = 0;
 		data = filterData;
 		page = filterPage;
-	} else if (
-		(hardTypeFilters != null &&
-			(Object.values(filterTypes).every((i) => i == true) ||
-				Object.values(filterTypes).every((i) => i == false))) ||
-		(hardUnreadFilter == true && filterUnread == false)
-	) {
+		usingFilterData = true;
+	} else {
 		// Disable hard type filters and return to regular data list
-		hardTypeFilters = null;
-		hardUnreadFilter = false;
+		usingFilterData = false;
 		filterData = [];
 		filterPage = 0;
 		data = normalData;
@@ -168,8 +167,9 @@ async function main() {
 		page++;
 		const newFetch = await api.fetchFeed({
 			page,
-			type: hardTypeFilters == null ? undefined : hardTypeFilters,
-			unread: hardUnreadFilter == true ? true : undefined
+			type: serializeTypeFilters(),
+			unread: filterUnread == true ? true : undefined,
+			search: searchQuery ?? undefined
 		});
 		if (newFetch.length == 0) {
 			endReached = true;
@@ -464,6 +464,57 @@ async function main() {
 					}
 				}
 			}
+		} else if (display.searchMode) {
+			switch (keyString) {
+				case "\u0003": {
+					// ctrl-c
+					if (downloader.queue.length != downloader.queueIndex) {
+						// Send the user out of search mode and into normal mode
+						display.searchMode = false;
+						display.writeFrame();
+					} else {
+						Display.clearScreen();
+						return process.exit();
+					}
+					break;
+				}
+				case "\r": {
+					// Enter (carriage return) - Move search buffer into search
+					searchQuery = display.searchBuffer.trim();
+					if (searchQuery.length == 0) {
+						searchQuery = null;
+					}
+					display.searchMode = false;
+					updateHardFilters();
+					populateVideoList();
+					scrollToSelectedIndex();
+					break;
+				}
+				case "\u001B": {
+					// Escape (Leave search mode)
+					display.searchMode = false;
+					display.writeFrame();
+					break;
+				}
+				case "\u007F": {
+					// Backspace
+					display.searchBuffer = display.searchBuffer.slice(
+						0,
+						display.searchBuffer.length - 1
+					);
+					display.writeFrame();
+					break;
+				}
+				default: {
+					//console.log(btoa(keyString));
+					if (keyString.startsWith("\u001B")) {
+						// Starts with escape, disregard because we want to ignore control sequences
+						break;
+					}
+					display.searchBuffer = `${display.searchBuffer}${keyString}`;
+					display.writeFrame();
+				}
+			}
 		} else {
 			switch (keyString) {
 				case "\u0003":
@@ -559,7 +610,7 @@ async function main() {
 								await api.markRead({ read: [selectedData.videoId] });
 								selectedData.unread = false;
 								populateVideoList();
-								if (hardTypeFilters != null || hardUnreadFilter == true) {
+								if (usingFilterData) {
 									const n = normalData.find((d) => d.videoId == selectedData.videoId);
 									if (n != undefined) n.unread = false;
 								}
@@ -630,7 +681,7 @@ async function main() {
 								`[ u ${filterUnread ? "Unfilter" : "Filter"} Unread ]`,
 								"[ t Types ]",
 								"[ o Only Types ]",
-								"[ r Reset ]"
+								"[ r Reset (Including Search) ]"
 							]);
 							display.writeFrame();
 							break;
@@ -766,10 +817,7 @@ async function main() {
 							filterData = [];
 							filterPage = 0;
 
-							data =
-								hardTypeFilters == null && hardUnreadFilter == false
-									? normalData
-									: filterData;
+							data = usingFilterData ? filterData : normalData;
 							page = 0;
 
 							endReached = false;
@@ -794,7 +842,7 @@ async function main() {
 								await api.markRead({ read: [selectedData.videoId] });
 								selectedData.unread = false;
 								populateVideoList();
-								if (hardTypeFilters != null || hardUnreadFilter == true) {
+								if (usingFilterData) {
 									const n = normalData.find((d) => d.videoId == selectedData.videoId);
 									if (n != undefined) n.unread = false;
 								}
@@ -810,7 +858,7 @@ async function main() {
 								await api.markRead({ read: allUnread.map((v) => v.videoId) });
 								for (const u of allUnread) {
 									u.unread = false;
-									if (hardTypeFilters != null || hardUnreadFilter == true) {
+									if (usingFilterData) {
 										const n = normalData.find((d) => d.videoId == u.videoId);
 										if (n != undefined) n.unread = false;
 									}
@@ -830,6 +878,7 @@ async function main() {
 								filterTypes[k] = true;
 							}
 							filterUnread = false;
+							searchQuery = null;
 							updateHardFilters();
 							populateVideoList();
 							scrollToSelectedIndex();
@@ -858,7 +907,7 @@ async function main() {
 							if (!selectedData.unread) {
 								await api.markRead({ unread: [selectedData.videoId] });
 								selectedData.unread = true;
-								if (hardTypeFilters != null || hardUnreadFilter == true) {
+								if (usingFilterData) {
 									const n = normalData.find((d) => d.videoId == selectedData.videoId);
 									if (n != undefined) n.unread = true;
 								}
@@ -925,7 +974,7 @@ async function main() {
 								await api.markRead({ read: [selectedData.videoId] });
 								selectedData.unread = false;
 								populateVideoList();
-								if (hardTypeFilters != null || hardUnreadFilter == true) {
+								if (usingFilterData) {
 									const n = normalData.find((d) => d.videoId == selectedData.videoId);
 									if (n != undefined) n.unread = false;
 								}
@@ -950,6 +999,22 @@ async function main() {
 							display.displayDownloadQueue = downloader.queue;
 							display.downloadQueueScrollOffset = 0;
 							display.downloadQueueSelectedIndex = 0;
+							refreshKeyLabels();
+							display.writeFrame();
+							break;
+						}
+						default: {
+							clearInteractionChar(true);
+						}
+					}
+					break;
+				}
+				case "/": {
+					switch (currentInteractionChar) {
+						case "": {
+							// Enter search mode
+							display.searchMode = true;
+							display.searchBuffer = "";
 							refreshKeyLabels();
 							display.writeFrame();
 							break;

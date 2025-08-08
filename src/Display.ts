@@ -40,6 +40,9 @@ export default class Display extends EventEmitter<DisplayEvents> {
 	downloadQueueSelectedIndex: number;
 	downloadQueueScrollOffset: number;
 
+	searchMode: boolean;
+	searchBuffer: string;
+
 	constructor() {
 		super();
 		this.left = [];
@@ -56,6 +59,9 @@ export default class Display extends EventEmitter<DisplayEvents> {
 		this.downloadQueueOpen = false;
 		this.downloadQueueSelectedIndex = 0;
 		this.downloadQueueScrollOffset = 0;
+
+		this.searchMode = false;
+		this.searchBuffer = "";
 	}
 
 	populateVideoList(data: Video[]) {
@@ -267,16 +273,24 @@ export default class Display extends EventEmitter<DisplayEvents> {
 				}
 				let bottomContent = "";
 				let tmpCol = col;
-				for (let i = 0; i < this.bottom.length; i++) {
-					let item = this.bottom[i];
-					if (i > 0) item = ` ${item}`;
-					if (
-						item == undefined ||
-						tmpCol + item.length > width - MARGIN_HORIZONTAL - 1
-					)
-						break;
-					bottomContent = `${bottomContent}${item}`;
-					tmpCol += item.length;
+				if (this.searchMode) {
+					bottomContent = `${this.searchBuffer}\u2588`;
+					while (bottomContent.length + tmpCol > width - MARGIN_HORIZONTAL) {
+						bottomContent = bottomContent.slice(1);
+					}
+					tmpCol += bottomContent.length;
+				} else {
+					for (let i = 0; i < this.bottom.length; i++) {
+						let item = this.bottom[i];
+						if (i > 0) item = ` ${item}`;
+						if (
+							item == undefined ||
+							tmpCol + item.length > width - MARGIN_HORIZONTAL - 1
+						)
+							break;
+						bottomContent = `${bottomContent}${item}`;
+						tmpCol += item.length;
+					}
 				}
 				bottomContent = bottomContent.trim();
 				const extra = width - 2 * MARGIN_HORIZONTAL - bottomContent.length;

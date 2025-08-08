@@ -5,6 +5,7 @@ export interface FetchFeedOptions {
 	limit?: number;
 	unread?: boolean;
 	type?: string[];
+	search?: string;
 }
 
 export interface MarkReadOptions {
@@ -35,6 +36,9 @@ export class API {
 		}
 		if (options?.unread != undefined) {
 			query.set("unread", String(options.unread));
+		}
+		if (options?.search != undefined) {
+			query.set("search", options.search);
 		}
 		const res = await fetch(url.toString(), {
 			method: "GET",
