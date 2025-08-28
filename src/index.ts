@@ -18,6 +18,7 @@ const display = new Display();
 const api = new API(config.apiHostname, config.apiToken);
 const downloader = new Downloader(
 	config.downloadsDirectory,
+	config.downloadsDirectoryFallback,
 	config.cookiesBrowser
 );
 

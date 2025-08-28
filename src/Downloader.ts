@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
+import fs from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import type { Video } from "./types/Video";
@@ -25,12 +26,27 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 	private currentlyActive: boolean;
 	private cookiesBrowser: string;
 
-	constructor(downloadsDirectory: string, cookiesBrowser: string) {
+	constructor(
+		downloadsDirectory: string,
+		downloadsDirectoryFallback: string,
+		cookiesBrowser: string
+	) {
 		super();
 		if (downloadsDirectory.startsWith("~")) {
 			this.downloadsDir = resolve(homedir(), `.${downloadsDirectory.slice(1)}`);
 		} else {
 			this.downloadsDir = resolve(downloadsDirectory);
+		}
+		if (!fs.existsSync(this.downloadsDir)) {
+			// Use fallback
+			if (downloadsDirectoryFallback.startsWith("~")) {
+				this.downloadsDir = resolve(
+					homedir(),
+					`.${downloadsDirectoryFallback.slice(1)}`
+				);
+			} else {
+				this.downloadsDir = resolve(downloadsDirectoryFallback);
+			}
 		}
 		this.queue = [];
 		this.queueIndex = 0;
