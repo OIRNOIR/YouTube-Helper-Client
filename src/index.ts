@@ -394,7 +394,6 @@ async function main() {
 					switch (currentInteractionChar) {
 						case "": {
 							// Delete from queue
-							currentInteractionChar = "l";
 							const selectedData =
 								display.displayDownloadQueue[display.downloadQueueSelectedIndex];
 							if (selectedData == undefined) {
