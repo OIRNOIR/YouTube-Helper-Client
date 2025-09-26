@@ -102,8 +102,8 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 					// Wait a minute to continue, we might have made YouTube unhappy. The errored one will need manual intervention.
 					setTimeout(() => {
 						this.currentlyActive = false;
-						this.emit("progressUpdate");
 						this.activateQueue();
+						this.emit("progressUpdate");
 					}, 60000);
 				}
 				this.emit("progressUpdate");
