@@ -15,7 +15,7 @@
 	},
 	"dependencies": {
 		"@types/bun": "1.2.22",
-		"clipboardy": "4.0.0",
+		"clipboardy": "5.0.0",
 		"emoji-regex": "10.5.0"
 	},
 	"devDependencies": {
