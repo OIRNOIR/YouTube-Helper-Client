@@ -1,0 +1,7 @@
+{
+	"apiToken": "INSERT_AUTHORIZATION_TOKEN_HERE",
+	"apiHostname": "INSERT_HOSTNAME_HERE",
+	"downloadsDirectory": "~/Downloads/YouTube Downloads/",
+	"downloadsDirectoryFallback": "~/Downloads/",
+	"cookiesBrowser": "firefox"
+}
