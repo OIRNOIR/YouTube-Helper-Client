@@ -2,7 +2,7 @@
 
 This is an official TUI implementation of a client for the [YouTube Helper server](https://github.com/OIRNOIR/YouTube-Helper-Server).
 
-(INSERT SCREENSHOT HERE)
+<img width="1554" height="1054" alt="Screenshot_20251012_225935" src="https://github.com/user-attachments/assets/d35599af-aeb0-41bd-8cd7-9c22f8310f9f" />
 
 This is a simple self-hosted client/server setup for YouTube subscriptions.
 
