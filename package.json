@@ -21,7 +21,7 @@
 		"emoji-regex": "10.6.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.2.6"
+		"@biomejs/biome": "2.2.7"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
