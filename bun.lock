@@ -6,7 +6,7 @@
       "name": "youtube-helper-client",
       "dependencies": {
         "@types/bun": "1.3.2",
-        "clipboardy": "5.0.0",
+        "clipboardy": "5.0.1",
         "emoji-regex": "10.6.0",
       },
       "devDependencies": {
@@ -48,7 +48,7 @@
 
     "bun-types": ["bun-types@1.3.2", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-i/Gln4tbzKNuxP70OWhJRZz1MRfvqExowP7U6JKoI8cntFrtxg7RJK3jvz7wQW54UuvNC8tbKHHri5fy74FVqg=="],
 
-    "clipboardy": ["clipboardy@5.0.0", "", { "dependencies": { "execa": "^9.6.0", "is-wayland": "^0.1.0", "is-wsl": "^3.1.0", "is64bit": "^2.0.0" } }, "sha512-MQfKHaD09eP80Pev4qBxZLbxJK/ONnqfSYAPlCmPh+7BDboYtO/3BmB6HGzxDIT0SlTRc2tzS8lQqfcdLtZ0Kg=="],
+    "clipboardy": ["clipboardy@5.0.1", "", { "dependencies": { "execa": "^9.6.0", "is-wayland": "^0.1.0", "is-wsl": "^3.1.0", "is64bit": "^2.0.0" } }, "sha512-pJ5ZDWjOT593Nli4TqlRLy33KomlAPxIFntMFxXrCqJON1cGcGPT5nNFxRxJ9m4HbfrccsYve7XwXjywW6nXVw=="],
 
     "cross-spawn": ["cross-spawn@7.0.6", "", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA=="],
 
