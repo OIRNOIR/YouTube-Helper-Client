@@ -8,7 +8,8 @@ import type { ConfigFile } from "./types/ConfigFile.ts";
 import type { Video } from "./types/Video.ts";
 import { execAsync } from "./util.ts";
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+let __dirname = path.dirname(new URL(import.meta.url).pathname);
+if (process.platform == "win32") __dirname = __dirname.slice(1);
 
 const config = JSON.parse(
 	fs.readFileSync(path.join(__dirname, "..", "config.json"), "utf-8")
