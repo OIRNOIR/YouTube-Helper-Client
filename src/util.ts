@@ -9,13 +9,9 @@ export function execAsync(
 	stderr: string;
 }> {
 	return new Promise((resolve) => {
-		exec(
-			command,
-			settings,
-			(error: ExecException | null, stdout: string, stderr: string) => {
-				resolve({ error, stdout, stderr });
-			}
-		);
+		exec(command, settings, (error, stdout, stderr) => {
+			resolve({ error, stdout: stdout as string, stderr: stderr as string });
+		});
 	});
 }
 

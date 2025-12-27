@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import EventEmitter from "node:events";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
@@ -15,7 +16,12 @@ export interface DownloadVideo {
 	useAuthentication: boolean;
 }
 
-export default class Downloader extends EventTarget {
+interface DownloaderEvents {
+	progressUpdate: [];
+	downloaderOutput: [line: string]; // Verbose
+}
+
+export default class Downloader extends EventEmitter<DownloaderEvents> {
 	queue: DownloadVideo[];
 	queueIndex: number;
 	private downloadsDir: string;
@@ -79,15 +85,11 @@ export default class Downloader extends EventTarget {
 			});
 			dlp.stdout.on("data", (data: ToStringAble) => {
 				item.stdout = `${item.stdout}${data.toString()}`;
-				this.dispatchEvent(
-					new CustomEvent("downloaderOutput", { detail: data.toString() })
-				);
+				this.emit("downloaderOutput", data.toString());
 			});
 			dlp.stderr.on("data", (data: ToStringAble) => {
 				item.stdout = `${item.stdout}\u001B[38;5;196m${data.toString()}\u001B[0m`;
-				this.dispatchEvent(
-					new CustomEvent("downloaderOutput", { detail: data.toString() })
-				);
+				this.emit("downloaderOutput", data.toString());
 			});
 			dlp.on("exit", (code: number) => {
 				this.queueIndex++;
@@ -103,10 +105,10 @@ export default class Downloader extends EventTarget {
 					setTimeout(() => {
 						this.currentlyActive = false;
 						this.activateQueue();
-						this.dispatchEvent(new CustomEvent("progressUpdate"));
+						this.emit("progressUpdate");
 					}, 60000);
 				}
-				this.dispatchEvent(new CustomEvent("progressUpdate"));
+				this.emit("progressUpdate");
 			});
 		}
 	}

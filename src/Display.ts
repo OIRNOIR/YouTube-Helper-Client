@@ -1,3 +1,4 @@
+import EventEmitter from "node:events";
 import process from "node:process";
 import { unicodeWidth } from "@std/cli";
 import emojiRegex from "emoji-regex";
@@ -10,7 +11,11 @@ const MARGIN_HORIZONTAL = 4;
 const GUTTER = 4;
 const SCROLL_BUFFER = 3;
 
-export default class Display extends EventTarget {
+interface DisplayEvents {
+	needsData: [];
+}
+
+export default class Display extends EventEmitter<DisplayEvents> {
 	left: {
 		content: string;
 		videoId: string;
@@ -402,7 +407,7 @@ export default class Display extends EventTarget {
 					if (leftItem == undefined && !this.emittedNeedsData) {
 						// Needs more data to fill the whole screen!
 						this.emittedNeedsData = true;
-						this.dispatchEvent(new CustomEvent("needsData"));
+						this.emit("needsData");
 					}
 					const selected = this.selectedIndex == leftIndex && leftItem != undefined;
 					const leftSpace =

@@ -160,12 +160,12 @@ async function main() {
 	normalData = await api.fetchFeed();
 	data = normalData;
 
-	downloader.addEventListener("progressUpdate", () => {
+	downloader.on("progressUpdate", () => {
 		updateDownloaderBar();
 		display.writeFrame();
 	});
 
-	display.addEventListener("needsData", async () => {
+	display.on("needsData", async () => {
 		if (endReached) return;
 		page++;
 		const newFetch = await api.fetchFeed({
