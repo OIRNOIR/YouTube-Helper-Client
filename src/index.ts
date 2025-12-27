@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+import process from "node:process";
 import clipboard from "clipboardy";
 import { API } from "./API.ts";
 import Display from "./Display.ts";
 import Downloader from "./Downloader.ts";
 import type { ConfigFile } from "./types/ConfigFile.ts";
 import type { Video } from "./types/Video.ts";
-import { execAsync } from "./util.ts";
+import { execAsync, type ToStringAble } from "./util.ts";
 
 let __dirname = path.dirname(new URL(import.meta.url).pathname);
 if (process.platform == "win32") __dirname = __dirname.slice(1);
@@ -159,12 +160,12 @@ async function main() {
 	normalData = await api.fetchFeed();
 	data = normalData;
 
-	downloader.on("progressUpdate", () => {
+	downloader.addEventListener("progressUpdate", () => {
 		updateDownloaderBar();
 		display.writeFrame();
 	});
 
-	display.on("needsData", async () => {
+	display.addEventListener("needsData", async () => {
 		if (endReached) return;
 		page++;
 		const newFetch = await api.fetchFeed({
@@ -238,7 +239,7 @@ async function main() {
 	process.stdin.resume();
 	process.stdin.setEncoding("utf8");
 
-	process.stdin.on("data", async (key) => {
+	process.stdin.on("data", async (key: ToStringAble) => {
 		const keyString = key.toString();
 		if (display.downloadQueueOpen) {
 			switch (keyString) {

@@ -1,20 +1,16 @@
-import { EventEmitter } from "node:events";
-import { stringWidth } from "bun";
+import process from "node:process";
+import { unicodeWidth } from "@std/cli";
 import emojiRegex from "emoji-regex";
-import type { DownloadVideo } from "./Downloader";
-import type { Video } from "./types/Video";
-import { msToMostSignificantWord, msToShort } from "./util";
+import type { DownloadVideo } from "./Downloader.ts";
+import type { Video } from "./types/Video.ts";
+import { msToMostSignificantWord, msToShort } from "./util.ts";
 
 const MARGIN_VERTICAL = 2;
 const MARGIN_HORIZONTAL = 4;
 const GUTTER = 4;
 const SCROLL_BUFFER = 3;
 
-interface DisplayEvents {
-	needsData: [];
-}
-
-export default class Display extends EventEmitter<DisplayEvents> {
+export default class Display extends EventTarget {
 	left: {
 		content: string;
 		videoId: string;
@@ -370,21 +366,21 @@ export default class Display extends EventEmitter<DisplayEvents> {
 						const currentChar = item.title[i];
 						if (
 							currentChar != undefined &&
-							stringWidth(currentChar) > 1 &&
+							unicodeWidth(currentChar) > 1 &&
 							si == space - 2 &&
-							stringWidth(item.title) > space
+							unicodeWidth(item.title) > space
 						) {
 							write(" \u2026");
 							si++;
 							col++;
-						} else if (si == space - 1 && stringWidth(item.title) > space) {
+						} else if (si == space - 1 && unicodeWidth(item.title) > space) {
 							write("\u2026");
 						} else if (si == space - 1) {
 							write(" \u001B[0m");
 						} else {
 							write(currentChar ?? " ");
-							if (currentChar != undefined && stringWidth(currentChar) > 1) {
-								const diff = stringWidth(currentChar) - 1;
+							if (currentChar != undefined && unicodeWidth(currentChar) > 1) {
+								const diff = unicodeWidth(currentChar) - 1;
 								col += diff;
 								si += diff;
 							}
@@ -406,7 +402,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 					if (leftItem == undefined && !this.emittedNeedsData) {
 						// Needs more data to fill the whole screen!
 						this.emittedNeedsData = true;
-						this.emit("needsData");
+						this.dispatchEvent(new CustomEvent("needsData"));
 					}
 					const selected = this.selectedIndex == leftIndex && leftItem != undefined;
 					const leftSpace =
@@ -429,9 +425,9 @@ export default class Display extends EventEmitter<DisplayEvents> {
 						if (
 							leftItem != undefined &&
 							currentChar != undefined &&
-							stringWidth(currentChar) > 1 &&
+							unicodeWidth(currentChar) > 1 &&
 							siLeft == leftSpace - 2 &&
-							stringWidth(leftItem.content) > leftSpace
+							unicodeWidth(leftItem.content) > leftSpace
 						) {
 							write(" \u2026");
 							siLeft++;
@@ -439,19 +435,19 @@ export default class Display extends EventEmitter<DisplayEvents> {
 						} else if (
 							leftItem != undefined &&
 							siLeft == leftSpace - 1 &&
-							stringWidth(leftItem.content) > leftSpace
+							unicodeWidth(leftItem.content) > leftSpace
 						) {
 							write("\u2026");
 						} else if (
 							siLeft == leftSpace - 1 &&
 							leftItem != undefined &&
-							stringWidth(leftItem.content) < leftSpace
+							unicodeWidth(leftItem.content) < leftSpace
 						) {
 							write(" \u001B[0m");
 						} else {
 							write(currentChar ?? " ");
-							if (currentChar != undefined && stringWidth(currentChar) > 1) {
-								const diff = stringWidth(currentChar) - 1;
+							if (currentChar != undefined && unicodeWidth(currentChar) > 1) {
+								const diff = unicodeWidth(currentChar) - 1;
 								col += diff;
 								siLeft += diff;
 							}
@@ -497,7 +493,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 									write("\u001B[0m");
 									const spaceRemaining = width - MARGIN_HORIZONTAL - col;
 									const padding =
-										spaceRemaining - stringWidth(rightItem.content.split("\t")[1] ?? "");
+										spaceRemaining - unicodeWidth(rightItem.content.split("\t")[1] ?? "");
 									if (padding > 0) {
 										for (let j = 0; j < padding; j++) {
 											write(" ");
@@ -510,8 +506,8 @@ export default class Display extends EventEmitter<DisplayEvents> {
 								} else {
 									write(currentChar ?? " ");
 									col++;
-									if (currentChar != undefined && stringWidth(currentChar) > 1) {
-										const diff = stringWidth(currentChar) - 1;
+									if (currentChar != undefined && unicodeWidth(currentChar) > 1) {
+										const diff = unicodeWidth(currentChar) - 1;
 										col += diff;
 										if (col == width - MARGIN_HORIZONTAL - 1) {
 											break;
@@ -526,7 +522,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 							}
 							if (rightItem.center) {
 								const padding = Math.floor(
-									(rightSpace - stringWidth(rightItem.content)) / 2
+									(rightSpace - unicodeWidth(rightItem.content)) / 2
 								);
 								for (let i = 0; i < padding; i++) {
 									write(" ");
@@ -551,8 +547,8 @@ export default class Display extends EventEmitter<DisplayEvents> {
 									col++;
 									si++;
 									finalI++;
-									if (char != undefined && stringWidth(char) > 1) {
-										const diff = stringWidth(char) - 1;
+									if (char != undefined && unicodeWidth(char) > 1) {
+										const diff = unicodeWidth(char) - 1;
 										col += diff;
 										si += diff;
 										if (col == width - MARGIN_HORIZONTAL - 1) {
@@ -572,8 +568,8 @@ export default class Display extends EventEmitter<DisplayEvents> {
 									}
 									write(char ?? " ");
 									col++;
-									if (char != undefined && stringWidth(char) > 1) {
-										const diff = stringWidth(char) - 1;
+									if (char != undefined && unicodeWidth(char) > 1) {
+										const diff = unicodeWidth(char) - 1;
 										col += diff;
 										if (col == width - MARGIN_HORIZONTAL - 1) {
 											break;

@@ -1,17 +1,21 @@
 import { type ExecException, type ExecOptions, exec } from "node:child_process";
 
-export async function execAsync(
+export function execAsync(
 	command: string,
 	settings?: ExecOptions
 ): Promise<{
 	error: ExecException | null;
-	stdout: string | Buffer<ArrayBufferLike>;
-	stderr: string | Buffer<ArrayBufferLike>;
+	stdout: string;
+	stderr: string;
 }> {
 	return new Promise((resolve) => {
-		exec(command, settings, (error, stdout, stderr) => {
-			resolve({ error, stdout, stderr });
-		});
+		exec(
+			command,
+			settings,
+			(error: ExecException | null, stdout: string, stderr: string) => {
+				resolve({ error, stdout, stderr });
+			}
+		);
 	});
 }
 
@@ -78,3 +82,5 @@ export function msToMostSignificantWord(ms: number): string {
 	}
 	return `${seconds} Seconds`;
 }
+
+export type ToStringAble = unknown & { toString: () => string };

@@ -1,14 +1,10 @@
 import { spawn } from "node:child_process";
-import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import type { Video } from "./types/Video";
-
-interface DownloaderEvents {
-	progressUpdate: [];
-	downloaderOutput: [line: string]; // Verbose
-}
+import { setImmediate } from "node:timers";
+import type { Video } from "./types/Video.ts";
+import type { ToStringAble } from "./util.ts";
 
 export interface DownloadVideo {
 	title: string;
@@ -19,7 +15,7 @@ export interface DownloadVideo {
 	useAuthentication: boolean;
 }
 
-export default class Downloader extends EventEmitter<DownloaderEvents> {
+export default class Downloader extends EventTarget {
 	queue: DownloadVideo[];
 	queueIndex: number;
 	private downloadsDir: string;
@@ -81,15 +77,19 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 			const dlp = spawn("yt-dlp", args, {
 				cwd: this.downloadsDir
 			});
-			dlp.stdout.on("data", (data) => {
+			dlp.stdout.on("data", (data: ToStringAble) => {
 				item.stdout = `${item.stdout}${data.toString()}`;
-				this.emit("downloaderOutput", data.toString());
+				this.dispatchEvent(
+					new CustomEvent("downloaderOutput", { detail: data.toString() })
+				);
 			});
-			dlp.stderr.on("data", (data) => {
+			dlp.stderr.on("data", (data: ToStringAble) => {
 				item.stdout = `${item.stdout}\u001B[38;5;196m${data.toString()}\u001B[0m`;
-				this.emit("downloaderOutput", data.toString());
+				this.dispatchEvent(
+					new CustomEvent("downloaderOutput", { detail: data.toString() })
+				);
 			});
-			dlp.on("exit", (code) => {
+			dlp.on("exit", (code: number) => {
 				this.queueIndex++;
 				item.exitCode = code;
 				if (code == 0) {
@@ -103,10 +103,10 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 					setTimeout(() => {
 						this.currentlyActive = false;
 						this.activateQueue();
-						this.emit("progressUpdate");
+						this.dispatchEvent(new CustomEvent("progressUpdate"));
 					}, 60000);
 				}
-				this.emit("progressUpdate");
+				this.dispatchEvent(new CustomEvent("progressUpdate"));
 			});
 		}
 	}
