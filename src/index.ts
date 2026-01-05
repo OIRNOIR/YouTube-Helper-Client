@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import clipboard from "clipboardy";
 import { API } from "./API.ts";
 import Display from "./Display.ts";
 import Downloader from "./Downloader.ts";
@@ -55,6 +54,19 @@ const filterTypes = {
 	short: true,
 	stream: true
 };
+
+async function writeClipboard(data: string): Promise<undefined> {
+	const encoder = new TextEncoder();
+	const osc = encoder.encode(`\x1b]52;c;${btoa(`${data}`)}\x07`);
+	const writer = Deno.stdout.writable.getWriter();
+	const promise = writer.write(osc);
+	writer.releaseLock();
+	try {
+		await promise;
+	} catch {
+		// ignored
+	}
+}
 
 function getFilteredData(dataInput?: Video[]) {
 	let filtered = dataInput ?? data;
@@ -582,7 +594,7 @@ async function main() {
 								refreshKeyLabels();
 								break;
 							}
-							clipboard.writeSync(`https://youtu.be/${selectedData.videoId}`);
+							await writeClipboard(`https://youtu.be/${selectedData.videoId}`);
 							display.populateKeyLabels(["Copied!"]);
 							display.writeFrame();
 							refreshKeyLabels();
