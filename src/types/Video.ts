@@ -13,4 +13,5 @@ export interface Video {
 	isCurrentlyLive: boolean;
 	unread: boolean;
 	sponsorBlockStatus: null | "sponsor" | "selfpromo" | "exclusive_access";
+	url: string;
 }

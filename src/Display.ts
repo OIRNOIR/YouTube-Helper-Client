@@ -82,7 +82,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 		const regex = emojiRegex();
 
 		this.left = data.map((v) => {
-			let formattedUsername = `${v.username.slice(1)}:`;
+			let formattedUsername = `${v.username.startsWith("@") ? v.username.slice(1) : v.username}:`;
 			while (formattedUsername.length < titleShiftRight) {
 				formattedUsername = `${formattedUsername} `;
 			}
