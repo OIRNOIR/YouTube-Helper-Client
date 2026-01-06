@@ -115,12 +115,7 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 
 	addItem(video: Video | DownloadVideo, useAuthentication?: boolean) {
 		this.queue.push({
-			link:
-				"link" in video
-					? video.link
-					: video.url != null
-						? video.url
-						: `https://youtu.be/${video.videoId}`,
+			link: "link" in video ? video.link : video.url,
 			stdout: "",
 			status: "queue",
 			exitCode: null,

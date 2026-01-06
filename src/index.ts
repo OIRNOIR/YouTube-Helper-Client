@@ -594,7 +594,7 @@ async function main() {
 								refreshKeyLabels();
 								break;
 							}
-							await writeClipboard(`https://youtu.be/${selectedData.videoId}`);
+							await writeClipboard(selectedData.url);
 							display.populateKeyLabels(["Copied!"]);
 							display.writeFrame();
 							refreshKeyLabels();
@@ -618,7 +618,7 @@ async function main() {
 								refreshKeyLabels();
 								break;
 							}
-							const command = `nohup mpv "https://youtu.be/${selectedData.videoId}" </dev/null &>/dev/null &`;
+							const command = `nohup mpv "${selectedData.url}" </dev/null &>/dev/null &`;
 							await execAsync(command);
 							if (selectedData.unread) {
 								await api.markRead({ read: [selectedData.videoId] });
