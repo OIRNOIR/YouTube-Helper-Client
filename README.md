@@ -18,13 +18,13 @@ This assumes you have a basic understanding of the CLI and already have a server
 1. Clone this repository into a directory somewhere on your local machine, then cd to it in a terminal.
 
 2. Install dependencies:
-    - [Bun](https://bun.sh/)
+    - [Deno](https://deno.com/)
     - [yt-dlp](https://github.com/yt-dlp/yt-dlp/)
     - [FFmpeg](https://ffmpeg.org/)
     - aria2 (Available on [Homebrew](https://brew.sh) for macOS and most Linux package managers)
 
-3. Install Bun packages:
-    - `bun install`
+3. Install Deno packages:
+    - `deno install`
 
 4. Create config file
     - `cp config.json.example config.json`
@@ -37,14 +37,14 @@ This assumes you have a basic understanding of the CLI and already have a server
 Start the client with:
 
 ```bash
-bun run ./src/index.ts
+deno run ./src/index.ts
 ```
 
 If you wish to set an alias for this command (for instance, if you wish to alias the command `yt` to
 running this program), you can add an alias to your .bashrc or equivalent:
 
 ```bash
-alias yt="bun run /path/to/YouTube-Helper-Client/src/index.ts"
+alias yt="deno run /path/to/YouTube-Helper-Client/src/index.ts"
 ```
 
 ## Features
