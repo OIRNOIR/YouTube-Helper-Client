@@ -9,7 +9,7 @@
 	},
 	"imports": {
 		"@biomejs/biome": "npm:@biomejs/biome@2.3.11",
-		"@std/cli": "jsr:@std/cli@1.0.25",
+		"@std/cli": "jsr:@std/cli@1.0.26",
 		"emoji-regex": "npm:emoji-regex@10.6.0"
 	},
 	"permissions": {
