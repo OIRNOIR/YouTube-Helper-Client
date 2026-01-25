@@ -61,19 +61,19 @@ export function msToMostSignificantWord(ms: number): string {
 	const days = Math.trunc((ms / 86400000) % 7);
 	const weeks = Math.trunc((ms / 604800000) % 52);
 	const years = Math.trunc(ms / 31449600000);
-	if (years > 0) {
+	if (years != 0) {
 		return `${years} Years`;
 	}
-	if (weeks > 0) {
+	if (weeks != 0) {
 		return `${weeks} Weeks`;
 	}
-	if (days > 0) {
+	if (days != 0) {
 		return `${days} Days`;
 	}
-	if (hours > 0) {
+	if (hours != 0) {
 		return `${hours} Hours`;
 	}
-	if (minutes > 0) {
+	if (minutes != 0) {
 		return `${minutes} Minutes`;
 	}
 	return `${seconds} Seconds`;
