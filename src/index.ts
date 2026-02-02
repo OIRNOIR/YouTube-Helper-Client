@@ -1060,7 +1060,7 @@ async function main() {
 		}
 	});
 
-	process.stdout.on("resize", () => {
+	Deno.addSignalListener("SIGWINCH", () => {
 		display.writeFrame();
 	});
 }
