@@ -193,8 +193,8 @@ export default class Display extends EventEmitter<DisplayEvents> {
 		function write(str: string) {
 			stdout = `${stdout}${str}`;
 		}
-		const width = process.stdout.columns;
-		const height = process.stdout.rows;
+
+		const { columns: width, rows: height } = Deno.consoleSize();
 
 		let screenScrollTop = 0;
 		let screenScrollBottom = 0;
