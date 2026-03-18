@@ -19,6 +19,9 @@ jobs:
         cmds: ["deno task typecheck"]
     steps:
       - uses: denoland/setup-deno@v2
+        with:
+            cache: true
+            deno-version: 2.7.6
 
       - name: Check out code
         uses: actions/checkout@v6
