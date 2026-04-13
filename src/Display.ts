@@ -543,6 +543,11 @@ export default class Display extends EventEmitter<DisplayEvents> {
 									finalI = i;
 									if (col >= width - MARGIN_HORIZONTAL) break;
 									const char = rightItem.content[i + rightWrapIndex];
+									if (char == "\r") {
+										// Ignore spurious carriage-return characters.
+										// This is the same behavior as on the youtube web interface.
+										continue;
+									}
 									if (char == "\n") {
 										newline = true;
 										rightWrapIndex += i + 1;
