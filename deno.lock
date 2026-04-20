@@ -1,25 +1,25 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@std/cli@1.0.28": "1.0.28",
-    "jsr:@std/fmt@^1.0.9": "1.0.9",
-    "jsr:@std/internal@^1.0.12": "1.0.12",
+    "jsr:@std/cli@1.0.29": "1.0.29",
+    "jsr:@std/fmt@^1.0.10": "1.0.10",
+    "jsr:@std/internal@^1.0.13": "1.0.13",
     "npm:@biomejs/biome@2.4.12": "2.4.12",
     "npm:emoji-regex@10.6.0": "10.6.0"
   },
   "jsr": {
-    "@std/cli@1.0.28": {
-      "integrity": "74ef9b976db59ca6b23a5283469c9072be6276853807a83ec6c7ce412135c70a",
+    "@std/cli@1.0.29": {
+      "integrity": "fa4ef29130baa834d8a13b7d138240c3a2fcfba740bfb7afa646a360a15ec84f",
       "dependencies": [
         "jsr:@std/fmt",
         "jsr:@std/internal"
       ]
     },
-    "@std/fmt@1.0.9": {
-      "integrity": "2487343e8899fb2be5d0e3d35013e54477ada198854e52dd05ed0422eddcabe0"
+    "@std/fmt@1.0.10": {
+      "integrity": "90dfba288802ac6de82fb31d0917eb9e4450b9925b954d5e51fc29ac07419db5"
     },
-    "@std/internal@1.0.12": {
-      "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
+    "@std/internal@1.0.13": {
+      "integrity": "2f9546691d4ac2d32859c82dff284aaeac980ddeca38430d07941e7e288725c0"
     }
   },
   "npm": {
@@ -83,7 +83,7 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@std/cli@1.0.28",
+      "jsr:@std/cli@1.0.29",
       "npm:@biomejs/biome@2.4.12",
       "npm:emoji-regex@10.6.0"
     ]
