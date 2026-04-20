@@ -65,6 +65,7 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 			this.currentlyActive = true;
 			const item = currentItem;
 			item.status = "progress";
+			this.emit("progressUpdate");
 			const args = [
 				"--external-downloader",
 				"aria2c",
@@ -105,7 +106,6 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 					setTimeout(() => {
 						this.currentlyActive = false;
 						this.activateQueue();
-						this.emit("progressUpdate");
 					}, 60000);
 				}
 				this.emit("progressUpdate");
