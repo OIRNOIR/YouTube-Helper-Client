@@ -1,8 +1,8 @@
 # YouTube Helper Client
 
-This is an official TUI implementation of a client for the [YouTube Helper server](https://github.com/OIRNOIR/YouTube-Helper-Server).
+This is an official TUI implementation of a client for the [YouTube Helper server](https://git.oirnoir.dev/OIRNOIR/YouTube-Helper-Server).
 
-<img width="1554" height="1054" alt="A view of the YouTube Helper TUI" src="https://github.com/user-attachments/assets/d35599af-aeb0-41bd-8cd7-9c22f8310f9f" />
+!["A view of the YouTube Helper TUI"](https://assets.oirnoir.dev/yt-helper.demo.png)
 
 This is a simple self-hosted client/server setup for YouTube subscriptions.
 
