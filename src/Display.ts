@@ -20,6 +20,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 		content: string;
 		videoId: string;
 		bold: boolean;
+		strikethrough: boolean;
 	}[];
 	right: {
 		content: string;
@@ -94,7 +95,8 @@ export default class Display extends EventEmitter<DisplayEvents> {
 				// Might think of something better to put here
 				content: `${formattedUsername}${title}`,
 				videoId: v.videoId,
-				bold: v.unread
+				bold: v.unread,
+				strikethrough: !v.isAvailable
 			};
 		});
 		if (selectedVideoId != undefined) {
@@ -171,6 +173,13 @@ export default class Display extends EventEmitter<DisplayEvents> {
 			this.right.push({
 				content: "Currently Live",
 				formatting: ["\u001B[38;5;196m"],
+				center: true
+			});
+		}
+		if (video.isAvailable == false) {
+			this.right.push({
+				content: "Currently Unavailable",
+				formatting: ["\u001B[38;5;242m"],
 				center: true
 			});
 		}
@@ -403,7 +412,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 				} else {
 					// Left content
 					const leftIndex = row - MARGIN_VERTICAL + this.scrollOffset;
-					const leftItem = this.left[leftIndex];
+					const leftItem: (typeof this.left)[0] | undefined = this.left[leftIndex];
 					if (leftItem == undefined && !this.emittedNeedsData) {
 						// Needs more data to fill the whole screen!
 						this.emittedNeedsData = true;
@@ -418,6 +427,9 @@ export default class Display extends EventEmitter<DisplayEvents> {
 						write("  ");
 					}
 					col += 2;
+					if (leftItem?.strikethrough) {
+						write("\u001B[9m");
+					}
 					if (leftItem?.bold) {
 						write("\u001B[1;97m");
 					} else {
