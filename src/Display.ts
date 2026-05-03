@@ -138,6 +138,11 @@ export default class Display extends EventEmitter<DisplayEvents> {
 			formatting: [videoTypeFormatting, "\u001B[32m"],
 			justify: true
 		});
+		this.right.push({
+			content: video.platform,
+			formatting: [],
+			center: true
+		});
 		switch (video.sponsorBlockStatus) {
 			case "sponsor": {
 				this.right.push({
@@ -164,11 +169,6 @@ export default class Display extends EventEmitter<DisplayEvents> {
 				break;
 			}
 		}
-		this.right.push({
-			content: video.platform,
-			formatting: [],
-			center: true
-		});
 		if (video.isCurrentlyLive) {
 			this.right.push({
 				content: "Currently Live",
