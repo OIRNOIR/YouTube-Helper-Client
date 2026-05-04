@@ -14,5 +14,13 @@ export interface Video {
 	unread: boolean;
 	sponsorBlockStatus: null | "sponsor" | "selfpromo" | "exclusive_access";
 	url: string;
-	isAvailable: boolean;
+	availability:
+		| "private"
+		| "premium_only"
+		| "subscriber_only"
+		| "needs_auth"
+		| "unlisted"
+		| "public"
+		| "upcoming_stream"
+		| "processing";
 }

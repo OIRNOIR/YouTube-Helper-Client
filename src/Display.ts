@@ -20,7 +20,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 		content: string;
 		videoId: string;
 		bold: boolean;
-		strikethrough: boolean;
+		dimmer: boolean;
 	}[];
 	right: {
 		content: string;
@@ -96,7 +96,7 @@ export default class Display extends EventEmitter<DisplayEvents> {
 				content: `${formattedUsername}${title}`,
 				videoId: v.videoId,
 				bold: v.unread,
-				strikethrough: !v.isAvailable
+				dimmer: v.availability != "public" && v.availability != "unlisted"
 			};
 		});
 		if (selectedVideoId != undefined) {
@@ -176,9 +176,9 @@ export default class Display extends EventEmitter<DisplayEvents> {
 				center: true
 			});
 		}
-		if (video.isAvailable == false) {
+		if (video.availability != "public") {
 			this.right.push({
-				content: "Currently Unavailable",
+				content: `${video.availability == "private" ? "Private Video" : video.availability == "premium_only" ? "Premium Required" : video.availability == "subscriber_only" ? "Channel Membership Required" : video.availability == "needs_auth" ? "Authentication Required" : video.availability == "unlisted" ? "Unlisted" : video.availability == "upcoming_stream" ? "Upcoming Stream" : video.availability == "processing" ? "Processing" : video.availability}`,
 				formatting: ["\u001B[38;5;242m"],
 				center: true
 			});
@@ -427,13 +427,18 @@ export default class Display extends EventEmitter<DisplayEvents> {
 						write("  ");
 					}
 					col += 2;
-					if (leftItem?.strikethrough) {
-						write("\u001B[9m");
-					}
-					if (leftItem?.bold) {
-						write("\u001B[1;97m");
+					if (leftItem?.dimmer) {
+						if (leftItem?.bold) {
+							write("\u001B[1;38;5;249m");
+						} else {
+							write("\u001B[38;5;246m");
+						}
 					} else {
-						write("\u001B[38;5;249m");
+						if (leftItem?.bold) {
+							write("\u001B[1;97m");
+						} else {
+							write("\u001B[38;5;249m");
+						}
 					}
 					// si tracks visual width, i tracks character in string
 					let siLeft = 0;
