@@ -10,6 +10,8 @@ export interface Video {
 	channelId: string;
 	timestampMS: number;
 	date: string;
+	releaseTimestampMS: number | null;
+	releaseDate: string | null;
 	isCurrentlyLive: boolean;
 	unread: boolean;
 	sponsorBlockStatus: null | "sponsor" | "selfpromo" | "exclusive_access";
