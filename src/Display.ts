@@ -4,7 +4,7 @@ import { unicodeWidth } from "@std/cli";
 import emojiRegex from "emoji-regex";
 import type { DownloadVideo } from "./Downloader.ts";
 import type { Video } from "./types/Video.ts";
-import { msToMostSignificantWord, msToShort } from "./util.ts";
+import { msToShort, timestampToRelativeString } from "./util.ts";
 
 const MARGIN_VERTICAL = 2;
 const MARGIN_HORIZONTAL = 4;
@@ -133,8 +133,14 @@ export default class Display extends EventEmitter<DisplayEvents> {
 			formatting: ["\u001B[3;31m", "\u001B[33m"],
 			justify: true
 		});
+		const mainTimestamp = video.releaseTimestampMS ?? video.timestampMS;
+		const prettyMainTimestamp = timestampToRelativeString(mainTimestamp);
+		const prettyUploadTimestamp = timestampToRelativeString(video.timestampMS);
+		const showUploadTimestamp =
+			video.releaseTimestampMS != null &&
+			prettyMainTimestamp != prettyUploadTimestamp;
 		this.right.push({
-			content: `${video.type == "video" ? "Video" : video.type == "stream" ? "Stream" : "Short"}\t${msToMostSignificantWord(Date.now() - video.timestampMS)} Ago`,
+			content: `${video.type == "video" ? "Video" : video.type == "stream" ? "Stream" : "Short"}\t${prettyMainTimestamp}${showUploadTimestamp ? ` (Uploaded ${prettyUploadTimestamp})` : ""}`,
 			formatting: [videoTypeFormatting, "\u001B[32m"],
 			justify: true
 		});

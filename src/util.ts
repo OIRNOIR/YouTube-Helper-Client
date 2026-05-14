@@ -62,21 +62,32 @@ export function msToMostSignificantWord(ms: number): string {
 	const weeks = Math.trunc((ms / 604800000) % 52);
 	const years = Math.trunc(ms / 31449600000);
 	if (years != 0) {
-		return `${years} Years`;
+		return `${years} Year${years == 1 ? "" : "s"}`;
 	}
 	if (weeks != 0) {
-		return `${weeks} Weeks`;
+		return `${weeks} Week${weeks == 1 ? "" : "s"}`;
 	}
 	if (days != 0) {
-		return `${days} Days`;
+		return `${days} Day${days == 1 ? "" : "s"}`;
 	}
 	if (hours != 0) {
-		return `${hours} Hours`;
+		return `${hours} Hour${hours == 1 ? "" : "s"}`;
 	}
 	if (minutes != 0) {
-		return `${minutes} Minutes`;
+		return `${minutes} Minute${minutes == 1 ? "" : "s"}`;
 	}
-	return `${seconds} Seconds`;
+	return `${seconds} Second${seconds == 1 ? "" : "s"}`;
+}
+
+/**
+ * Converts a timestamp to a short string relative to now
+ */
+export function timestampToRelativeString(timestamp: number): string {
+	const difference = timestamp - Date.now();
+	// Positive difference = in future
+	if (difference == 0) return "Just Now";
+	const rawString = msToMostSignificantWord(Math.abs(difference));
+	return difference > 0 ? `In ${rawString}` : `${rawString} Ago`;
 }
 
 export type ToStringAble = unknown & { toString: () => string };
