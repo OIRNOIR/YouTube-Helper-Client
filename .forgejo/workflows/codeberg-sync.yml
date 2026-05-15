@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout local code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Import GPG key
         run: |
@@ -35,6 +37,9 @@ jobs:
           CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
           CODEBERG_REPO: "codeberg.org/OIRNOIR/YouTube-Helper-Client.git"
         run: |
+          # Ensure we are on a real branch, not a detached HEAD
+          git checkout main || git checkout -b main
+
           # Add Codeberg remote
           git remote add codeberg https://OIRNOIR:${CODEBERG_TOKEN}@${CODEBERG_REPO}
 
