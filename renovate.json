@@ -13,7 +13,7 @@
 	"internalChecksFilter": "strict",
 	"packageRules": [
 		{
-			"matchDatasources": ["npm"],
+			"matchDatasources": ["npm", "jsr"],
 			"abandonmentThreshold": "1 year"
 		}
 	]
