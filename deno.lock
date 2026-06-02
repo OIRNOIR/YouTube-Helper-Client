@@ -1,15 +1,15 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@std/cli@1.0.29": "1.0.29",
+    "jsr:@std/cli@1.0.30": "1.0.30",
     "jsr:@std/fmt@^1.0.10": "1.0.10",
-    "jsr:@std/internal@^1.0.13": "1.0.13",
+    "jsr:@std/internal@^1.0.14": "1.0.14",
     "npm:@biomejs/biome@2.4.15": "2.4.15",
     "npm:emoji-regex@10.6.0": "10.6.0"
   },
   "jsr": {
-    "@std/cli@1.0.29": {
-      "integrity": "fa4ef29130baa834d8a13b7d138240c3a2fcfba740bfb7afa646a360a15ec84f",
+    "@std/cli@1.0.30": {
+      "integrity": "769446536522d0417d7127ebcabcafac1ab0ce6766d0eb3fca1d36326fe98d13",
       "dependencies": [
         "jsr:@std/fmt",
         "jsr:@std/internal"
@@ -18,8 +18,8 @@
     "@std/fmt@1.0.10": {
       "integrity": "90dfba288802ac6de82fb31d0917eb9e4450b9925b954d5e51fc29ac07419db5"
     },
-    "@std/internal@1.0.13": {
-      "integrity": "2f9546691d4ac2d32859c82dff284aaeac980ddeca38430d07941e7e288725c0"
+    "@std/internal@1.0.14": {
+      "integrity": "291516b3d4c35024d6ffbc0a9df5bf4c64116e05b50012cf846710152d2ffdf7"
     }
   },
   "npm": {
@@ -83,7 +83,7 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@std/cli@1.0.29",
+      "jsr:@std/cli@1.0.30",
       "npm:@biomejs/biome@2.4.15",
       "npm:emoji-regex@10.6.0"
     ]
