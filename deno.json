@@ -8,7 +8,7 @@
 		"typecheck": "deno check"
 	},
 	"imports": {
-		"@biomejs/biome": "npm:@biomejs/biome@2.4.15",
+		"@biomejs/biome": "npm:@biomejs/biome@2.4.16",
 		"@std/cli": "jsr:@std/cli@1.0.30",
 		"emoji-regex": "npm:emoji-regex@10.6.0"
 	},
