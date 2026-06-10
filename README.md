@@ -21,7 +21,6 @@ This assumes you have a basic understanding of the CLI and already have a server
     - [Deno](https://deno.com/)
     - [yt-dlp](https://github.com/yt-dlp/yt-dlp/)
     - [FFmpeg](https://ffmpeg.org/)
-    - aria2 (Available on [Homebrew](https://brew.sh) for macOS and most Linux package managers)
 
 3. Install Deno packages:
     - `deno install`

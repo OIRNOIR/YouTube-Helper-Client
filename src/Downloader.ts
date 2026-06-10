@@ -67,8 +67,8 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 			item.status = "progress";
 			this.emit("progressUpdate");
 			const args = [
-				"--external-downloader",
-				"aria2c",
+				"-N",
+				"5",
 				/* cspell: disable-next-line */
 				"--sponsorblock-remove",
 				"sponsor",
