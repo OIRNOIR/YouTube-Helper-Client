@@ -374,6 +374,9 @@ export default class Display extends EventEmitter<DisplayEvents> {
 					}
 					while (statusText.length < 7) {
 						statusText = `${statusText} `;
+						if (statusText.length < 7) {
+							statusText = ` ${statusText}`;
+						}
 					}
 					statusText = `[${statusText}] `;
 					write(statusFormatting);
