@@ -1,15 +1,15 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@std/cli@1.0.31": "1.0.31",
+    "jsr:@std/cli@1.0.32": "1.0.32",
     "jsr:@std/fmt@^1.0.10": "1.0.10",
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "npm:@biomejs/biome@2.5.2": "2.5.2",
     "npm:emoji-regex@10.6.0": "10.6.0"
   },
   "jsr": {
-    "@std/cli@1.0.31": {
-      "integrity": "190bb61f809378267c06be3bcd689fcc540f0cfaa5892171144cae787d02e2fd",
+    "@std/cli@1.0.32": {
+      "integrity": "188b3a100d6202d64e3f5bd3d799c7fa4f6d77f92cc65eb7f641c1fa0aa92a66",
       "dependencies": [
         "jsr:@std/fmt",
         "jsr:@std/internal"
@@ -83,7 +83,7 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@std/cli@1.0.31",
+      "jsr:@std/cli@1.0.32",
       "npm:@biomejs/biome@2.5.2",
       "npm:emoji-regex@10.6.0"
     ]
