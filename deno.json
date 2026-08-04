@@ -1,8 +1,5 @@
 {
 	"nodeModulesDir": "auto",
-	"compilerOptions": {
-		"lib": ["deno.ns", "deno.window"]
-	},
 	"tasks": {
 		"lint": "deno x @biomejs/biome check . --write && deno lint",
 		"style:check": "deno x @biomejs/biome ci . && deno lint",
@@ -22,5 +19,6 @@
 			"run": true,
 			"sys": true
 		}
-	}
+	},
+	"minimumDependencyAge": "P7D"
 }
