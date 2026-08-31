@@ -55,6 +55,9 @@ const filterTypes = {
 	stream: true
 };
 
+// ctrl-c, ctrl-d, or ctrl-\
+const QUIT_CHAR_SEQUENCES = ["\u0003", "\u0004", "\u001C"];
+
 async function writeClipboard(data: string): Promise<undefined> {
 	const encoder = new TextEncoder();
 	const osc = encoder.encode(`\x1b]52;c;${btoa(`${data}`)}\x07`);
@@ -256,9 +259,14 @@ async function main() {
 		if (display.downloadQueueOpen) {
 			switch (keyString) {
 				case "\u0003":
+				case "\u0004":
+				case "\u001C":
 				case "q": {
-					// ctrl-c
-					if (keyString == "\u0003" && currentInteractionChar != "q") {
+					// ctrl-c, ctrl-d, or ctrl-\
+					if (
+						QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
+						currentInteractionChar != "q"
+					) {
 						currentInteractionChar = "";
 					}
 					switch (currentInteractionChar) {
@@ -480,8 +488,10 @@ async function main() {
 			}
 		} else if (display.searchMode) {
 			switch (keyString) {
-				case "\u0003": {
-					// ctrl-c
+				case "\u0003":
+				case "\u0004":
+				case "\u001C": {
+					// ctrl-c, ctrl-d, ctrl-\
 					if (downloader.queue.length != downloader.queueIndex) {
 						// Send the user out of search mode and into normal mode
 						display.searchMode = false;
@@ -532,9 +542,14 @@ async function main() {
 		} else {
 			switch (keyString) {
 				case "\u0003":
+				case "\u0004":
+				case "\u001C":
 				case "q": {
-					// ctrl-c
-					if (keyString == "\u0003" && currentInteractionChar != "q") {
+					// ctrl-c, ctrl-d, ctrl-\
+					if (
+						QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
+						currentInteractionChar != "q"
+					) {
 						currentInteractionChar = "";
 					}
 					switch (currentInteractionChar) {
