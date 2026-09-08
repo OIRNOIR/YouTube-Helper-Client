@@ -60,12 +60,16 @@ alias yt="deno run /path/to/YouTube-Helper-Client/src/index.ts"
 - Jump to top: `gg`
 - Native SponsorBlock integration for full-video segments
 
+## Issues
+
+Issues should be directed to [Codeberg](https://codeberg.org/OIRNOIR/YouTube-Helper-Client).
+
 ## Contributing
 
 Official development for this program, including test running, etc. happens on a [Forgejo instance](https://git.oirnoir.dev/OIRNOIR/YouTube-Helper-Client)
 which is not open to public account-creation.
 
-Instead, contributions may be proposed (and issues reported) on [Codeberg](https://codeberg.org/OIRNOIR/YouTube-Helper-Client). Please be aware
+Instead, contributions may be proposed on [Codeberg](https://codeberg.org/OIRNOIR/YouTube-Helper-Client). Please be aware
 that this Codeberg repo does not support automated CI. You should ensure that your code compiles and is correctly styled
 before opening a pull request:
 
