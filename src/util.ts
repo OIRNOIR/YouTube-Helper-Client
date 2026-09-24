@@ -13,7 +13,7 @@ export function execAsync(
 			resolve({ error, stdout: stdout as string, stderr: stderr as string });
 		});
 	});
-}
+	}
 
 /**
  * Converts a quantity of ms to a shorter human-readable format
