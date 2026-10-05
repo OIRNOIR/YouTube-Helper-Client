@@ -167,7 +167,26 @@ function updateDownloaderBar() {
 	display.downloadQueueTotal = downloader.queue.length;
 }
 
+let restoredTerminal = false;
+
+function restoreTerminal() {
+	if (restoredTerminal) return;
+	restoredTerminal = true;
+	Display.exitAltScreen();
+}
+
+process.on("exit", restoreTerminal);
+Deno.addSignalListener("SIGINT", () => process.exit(130));
+Deno.addSignalListener("SIGTERM", () => process.exit(143));
+
+function quit(): void {
+	restoreTerminal();
+	process.exit();
+}
+
 async function main() {
+	Display.enterAltScreen();
+
 	refreshKeyLabels();
 
 	display.writeFrame();
@@ -272,7 +291,7 @@ async function main() {
 					switch (currentInteractionChar) {
 						case "q": {
 							// Confirmation
-							Display.clearScreen();
+							quit();
 							return process.exit();
 						}
 						case "": {
@@ -283,7 +302,7 @@ async function main() {
 								]);
 								display.writeFrame();
 							} else {
-								Display.clearScreen();
+								quit();
 								return process.exit();
 							}
 							break;
@@ -497,7 +516,7 @@ async function main() {
 						display.searchMode = false;
 						display.writeFrame();
 					} else {
-						Display.clearScreen();
+						quit();
 						return process.exit();
 					}
 					break;
@@ -555,7 +574,7 @@ async function main() {
 					switch (currentInteractionChar) {
 						case "q": {
 							// Confirmation
-							Display.clearScreen();
+							quit();
 							return process.exit();
 						}
 						case "": {
@@ -566,7 +585,7 @@ async function main() {
 								]);
 								display.writeFrame();
 							} else {
-								Display.clearScreen();
+								quit();
 								return process.exit();
 							}
 							break;

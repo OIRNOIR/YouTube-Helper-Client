@@ -624,10 +624,18 @@ export default class Display extends EventEmitter<DisplayEvents> {
 	}
 
 	static get clearScreenText() {
-		return "\u001B[2J\u001B[3J\u001B[0;0f";
+		return "\u001B[2J\u001B[0;0f";
 	}
 
 	static clearScreen() {
 		process.stdout.write(Display.clearScreenText);
+	}
+
+	static enterAltScreen() {
+		process.stdout.write("\u001B[?1049h");
+	}
+
+	static exitAltScreen() {
+		process.stdout.write("\u001B[?1049l");
 	}
 }
