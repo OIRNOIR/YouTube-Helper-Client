@@ -409,6 +409,7 @@ async function main() {
 					switch (currentInteractionChar) {
 						case "": {
 							// Dump logs
+							// TODO: We want to be able to scroll up in this case
 							currentInteractionChar = "l";
 							const selectedData =
 								display.displayDownloadQueue[display.downloadQueueSelectedIndex];
