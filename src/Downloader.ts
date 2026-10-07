@@ -102,11 +102,11 @@ export default class Downloader extends EventEmitter<DownloaderEvents> {
 					this.activateQueue();
 				} else {
 					item.status = "error";
-					// Wait a minute to continue, we might have made YouTube unhappy. The errored one will need manual intervention.
+					// Wait ten seconds to continue, we might have made YouTube unhappy. The errored one will need manual intervention.
 					setTimeout(() => {
 						this.currentlyActive = false;
 						this.activateQueue();
-					}, 60000);
+					}, 10_000);
 				}
 				this.emit("progressUpdate");
 			});
