@@ -2,8 +2,6 @@ name: Sync Repository
 
 enable-email-notifications: true
 
-permissions: write-all
-
 on:
   push:
     branches: ["main"]
