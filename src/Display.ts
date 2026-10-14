@@ -15,7 +15,15 @@ interface DisplayEvents {
 	needsData: [];
 }
 
-export default class Display extends EventEmitter<DisplayEvents> {
+export enum Screen {
+	VIDEO_LIST = "VIDEO_LIST",
+	DOWNLOAD_QUEUE = "DOWNLOAD_QUEUE",
+	DOWNLOAD_LOGS = "DOWNLOAD_LOGS"
+}
+
+export class Display extends EventEmitter<DisplayEvents> {
+	activeScreen: Screen;
+
 	left: {
 		content: string;
 		videoId: string;
@@ -38,7 +46,6 @@ export default class Display extends EventEmitter<DisplayEvents> {
 	downloadQueueCompleted: number;
 	downloadQueueError: boolean;
 	displayDownloadQueue: DownloadVideo[];
-	downloadQueueOpen: boolean;
 	downloadQueueSelectedIndex: number;
 	downloadQueueScrollOffset: number;
 
@@ -47,6 +54,8 @@ export default class Display extends EventEmitter<DisplayEvents> {
 
 	constructor() {
 		super();
+		this.activeScreen = Screen.VIDEO_LIST;
+
 		this.left = [];
 		this.right = [];
 		this.bottom = [];
@@ -58,7 +67,6 @@ export default class Display extends EventEmitter<DisplayEvents> {
 		this.downloadQueueCompleted = 0;
 		this.downloadQueueError = false;
 		this.displayDownloadQueue = [];
-		this.downloadQueueOpen = false;
 		this.downloadQueueSelectedIndex = 0;
 		this.downloadQueueScrollOffset = 0;
 
@@ -328,293 +336,303 @@ export default class Display extends EventEmitter<DisplayEvents> {
 				for (; col < MARGIN_HORIZONTAL; col++) {
 					write(" ");
 				}
-				if (this.downloadQueueOpen) {
-					const index = row - MARGIN_VERTICAL + this.downloadQueueScrollOffset;
-					const item = this.displayDownloadQueue[index];
-					if (item == undefined) {
-						write("\n");
-						continue;
-					}
-					const selected =
-						this.downloadQueueSelectedIndex == index && item != undefined;
-					if (selected) {
-						write("\u001B[1;97m>\u001B[0m \u001B[4m");
-					} else {
-						write("  ");
-					}
-					col += 2;
-					let statusText = "";
-					let statusFormatting = "";
-					switch (item.status) {
-						case "queue": {
-							statusText = "";
-							statusFormatting = "\u001B[38;5;249m";
-							break;
+				switch (this.activeScreen) {
+					case Screen.DOWNLOAD_QUEUE: {
+						const index = row - MARGIN_VERTICAL + this.downloadQueueScrollOffset;
+						const item = this.displayDownloadQueue[index];
+						if (item == undefined) {
+							write("\n");
+							continue;
 						}
-						case "progress": {
-							statusText = "Working";
-							statusFormatting = "\u001B[38;5;226m";
-							break;
-						}
-						case "done": {
-							statusText = "Success";
-							statusFormatting = "\u001B[38;5;46m";
-							break;
-						}
-						case "error": {
-							statusText = "ERROR";
-							statusFormatting = "\u001B[38;5;196m";
-							break;
-						}
-						case "silenced": {
-							statusText = "ERROR";
-							statusFormatting = "\u001B[38;5;124m";
-							break;
-						}
-					}
-					while (statusText.length < 7) {
-						statusText = `${statusText} `;
-						if (statusText.length < 7) {
-							statusText = ` ${statusText}`;
-						}
-					}
-					statusText = `[${statusText}] `;
-					write(statusFormatting);
-					write(statusText);
-					col += statusText.length;
-					const space = width - MARGIN_HORIZONTAL - col - 2;
-					// si tracks visual width, i tracks character in string
-					let si = 0;
-					for (let i = 0; i < space && si < space; i++) {
-						const currentChar = item.title[i];
-						if (
-							currentChar != undefined &&
-							unicodeWidth(currentChar) > 1 &&
-							si == space - 2 &&
-							unicodeWidth(item.title) > space
-						) {
-							write(" \u2026");
-							si++;
-							col++;
-						} else if (si == space - 1 && unicodeWidth(item.title) > space) {
-							write("\u2026");
-						} else if (si == space - 1) {
-							write(" \u001B[0m");
+						const selected =
+							this.downloadQueueSelectedIndex == index && item != undefined;
+						if (selected) {
+							write("\u001B[1;97m>\u001B[0m \u001B[4m");
 						} else {
-							write(currentChar ?? " ");
-							if (currentChar != undefined && unicodeWidth(currentChar) > 1) {
-								const diff = unicodeWidth(currentChar) - 1;
-								col += diff;
-								si += diff;
+							write("  ");
+						}
+						col += 2;
+						let statusText = "";
+						let statusFormatting = "";
+						switch (item.status) {
+							case "queue": {
+								statusText = "";
+								statusFormatting = "\u001B[38;5;249m";
+								break;
+							}
+							case "progress": {
+								statusText = "Working";
+								statusFormatting = "\u001B[38;5;226m";
+								break;
+							}
+							case "done": {
+								statusText = "Success";
+								statusFormatting = "\u001B[38;5;46m";
+								break;
+							}
+							case "error": {
+								statusText = "ERROR";
+								statusFormatting = "\u001B[38;5;196m";
+								break;
+							}
+							case "silenced": {
+								statusText = "ERROR";
+								statusFormatting = "\u001B[38;5;124m";
+								break;
 							}
 						}
-						col++;
-						si++;
-					}
-					write("\u001B[0m");
-					if (selected) {
-						write(" \u001B[1;97m<\u001B[0m");
-					} else {
-						write("  ");
-					}
-					col += 2;
-				} else {
-					// Left content
-					const leftIndex = row - MARGIN_VERTICAL + this.scrollOffset;
-					const leftItem: (typeof this.left)[0] | undefined = this.left[leftIndex];
-					if (leftItem == undefined && !this.emittedNeedsData) {
-						// Needs more data to fill the whole screen!
-						this.emittedNeedsData = true;
-						this.emit("needsData");
-					}
-					const selected = this.selectedIndex == leftIndex && leftItem != undefined;
-					const leftSpace =
-						Math.floor((width - 2 * MARGIN_HORIZONTAL) / 2) - GUTTER / 2 - 4;
-					if (selected) {
-						write("\u001B[1;97m>\u001B[0m \u001B[4m");
-					} else {
-						write("  ");
-					}
-					col += 2;
-					if (leftItem?.dimmer) {
-						if (leftItem?.bold) {
-							write("\u001B[1;38;5;249m");
-						} else {
-							write("\u001B[38;5;246m");
-						}
-					} else {
-						if (leftItem?.bold) {
-							write("\u001B[1;97m");
-						} else {
-							write("\u001B[38;5;249m");
-						}
-					}
-					// si tracks visual width, i tracks character in string
-					let siLeft = 0;
-					for (let i = 0; i < leftSpace && siLeft < leftSpace; i++) {
-						const currentChar = leftItem?.content[i];
-						if (
-							leftItem != undefined &&
-							currentChar != undefined &&
-							unicodeWidth(currentChar) > 1 &&
-							siLeft == leftSpace - 2 &&
-							unicodeWidth(leftItem.content) > leftSpace
-						) {
-							write(" \u2026");
-							siLeft++;
-							col++;
-						} else if (
-							leftItem != undefined &&
-							siLeft == leftSpace - 1 &&
-							unicodeWidth(leftItem.content) > leftSpace
-						) {
-							write("\u2026");
-						} else if (
-							siLeft == leftSpace - 1 &&
-							leftItem != undefined &&
-							unicodeWidth(leftItem.content) < leftSpace
-						) {
-							write(" \u001B[0m");
-						} else {
-							write(currentChar ?? " ");
-							if (currentChar != undefined && unicodeWidth(currentChar) > 1) {
-								const diff = unicodeWidth(currentChar) - 1;
-								col += diff;
-								siLeft += diff;
+						while (statusText.length < 7) {
+							statusText = `${statusText} `;
+							if (statusText.length < 7) {
+								statusText = ` ${statusText}`;
 							}
 						}
-						col++;
-						siLeft++;
-					}
-					write("\u001B[0m");
-					if (selected) {
-						write(" \u001B[1;97m<\u001B[0m");
-					} else {
-						write("  ");
-					}
-					col += 2;
-
-					// Gutter
-					for (let i = 0; i < GUTTER; i++) {
-						write(" ");
-						col++;
-					}
-
-					// Right content
-					let rightItem = this.right[row - MARGIN_VERTICAL];
-					if (rightItem == undefined && this.right[this.right.length - 1]?.wrap) {
-						rightItem = this.right[this.right.length - 1];
-					}
-					if (
-						rightItem != undefined &&
-						(!rightItem.wrap || rightWrapIndex < rightItem.content.length)
-					) {
-						const rightSpace =
-							Math.floor((width - 2 * MARGIN_HORIZONTAL) / 2) - GUTTER / 2;
-						if (rightItem.justify) {
-							const formattingOne = rightItem.formatting?.[0];
-							const formattingTwo = rightItem.formatting?.[1];
-							if (formattingOne != undefined) {
-								write(formattingOne);
-							}
-							for (let i = 0; i <= rightSpace; i++) {
-								if (col >= width - MARGIN_HORIZONTAL) break;
-								const currentChar = rightItem.content[i];
-								if (currentChar == "\t") {
-									write("\u001B[0m");
-									const spaceRemaining = width - MARGIN_HORIZONTAL - col;
-									const padding =
-										spaceRemaining - unicodeWidth(rightItem.content.split("\t")[1] ?? "");
-									if (padding > 0) {
-										for (let j = 0; j < padding; j++) {
-											write(" ");
-											col++;
-										}
-									}
-									if (formattingTwo != undefined) {
-										write(formattingTwo);
-									}
-								} else {
-									write(currentChar ?? " ");
-									col++;
-									if (currentChar != undefined && unicodeWidth(currentChar) > 1) {
-										const diff = unicodeWidth(currentChar) - 1;
-										col += diff;
-										if (col == width - MARGIN_HORIZONTAL - 1) {
-											break;
-										}
-									}
-								}
-							}
-						} else {
-							const formattingOne = rightItem.formatting?.[0];
-							if (formattingOne != undefined) {
-								write(formattingOne);
-							}
-							if (rightItem.center) {
-								const padding = Math.floor(
-									(rightSpace - unicodeWidth(rightItem.content)) / 2
-								);
-								for (let i = 0; i < padding; i++) {
-									write(" ");
-									col++;
-								}
-							}
-							if (rightItem.wrap) {
-								let newline = false;
-								// si tracks visual width, i tracks character in string
-								let si = 0;
-								let finalI = 0;
-								for (let i = 0; i <= rightSpace && si <= rightSpace; i++) {
-									finalI = i;
-									if (col >= width - MARGIN_HORIZONTAL) break;
-									const char = rightItem.content[i + rightWrapIndex];
-									if (char == "\r") {
-										// Ignore spurious carriage-return characters.
-										// This is the same behavior as on the youtube web interface.
-										continue;
-									}
-									if (char == "\n") {
-										newline = true;
-										rightWrapIndex += i + 1;
-										break;
-									}
-									write(char ?? " ");
-									col++;
-									si++;
-									finalI++;
-									if (char != undefined && unicodeWidth(char) > 1) {
-										const diff = unicodeWidth(char) - 1;
-										col += diff;
-										si += diff;
-										if (col == width - MARGIN_HORIZONTAL - 1) {
-											break;
-										}
-									}
-								}
-								if (!newline) {
-									rightWrapIndex += finalI;
-								}
+						statusText = `[${statusText}] `;
+						write(statusFormatting);
+						write(statusText);
+						col += statusText.length;
+						const space = width - MARGIN_HORIZONTAL - col - 2;
+						// si tracks visual width, i tracks character in string
+						let si = 0;
+						for (let i = 0; i < space && si < space; i++) {
+							const currentChar = item.title[i];
+							if (
+								currentChar != undefined &&
+								unicodeWidth(currentChar) > 1 &&
+								si == space - 2 &&
+								unicodeWidth(item.title) > space
+							) {
+								write(" \u2026");
+								si++;
+								col++;
+							} else if (si == space - 1 && unicodeWidth(item.title) > space) {
+								write("\u2026");
+							} else if (si == space - 1) {
+								write(" \u001B[0m");
 							} else {
-								for (let i = 0; i <= rightSpace; i++) {
-									if (col >= width - MARGIN_HORIZONTAL) break;
-									const char = rightItem.content[i];
-									if (char == "\n") {
-										break;
-									}
-									write(char ?? " ");
-									col++;
-									if (char != undefined && unicodeWidth(char) > 1) {
-										const diff = unicodeWidth(char) - 1;
-										col += diff;
-										if (col == width - MARGIN_HORIZONTAL - 1) {
-											break;
-										}
-									}
+								write(currentChar ?? " ");
+								if (currentChar != undefined && unicodeWidth(currentChar) > 1) {
+									const diff = unicodeWidth(currentChar) - 1;
+									col += diff;
+									si += diff;
 								}
 							}
+							col++;
+							si++;
 						}
 						write("\u001B[0m");
+						if (selected) {
+							write(" \u001B[1;97m<\u001B[0m");
+						} else {
+							write("  ");
+						}
+						col += 2;
+						break;
+					}
+					case Screen.VIDEO_LIST: {
+						// Left content
+						const leftIndex = row - MARGIN_VERTICAL + this.scrollOffset;
+						const leftItem: (typeof this.left)[0] | undefined = this.left[leftIndex];
+						if (leftItem == undefined && !this.emittedNeedsData) {
+							// Needs more data to fill the whole screen!
+							this.emittedNeedsData = true;
+							this.emit("needsData");
+						}
+						const selected = this.selectedIndex == leftIndex && leftItem != undefined;
+						const leftSpace =
+							Math.floor((width - 2 * MARGIN_HORIZONTAL) / 2) - GUTTER / 2 - 4;
+						if (selected) {
+							write("\u001B[1;97m>\u001B[0m \u001B[4m");
+						} else {
+							write("  ");
+						}
+						col += 2;
+						if (leftItem?.dimmer) {
+							if (leftItem?.bold) {
+								write("\u001B[1;38;5;249m");
+							} else {
+								write("\u001B[38;5;246m");
+							}
+						} else {
+							if (leftItem?.bold) {
+								write("\u001B[1;97m");
+							} else {
+								write("\u001B[38;5;249m");
+							}
+						}
+						// si tracks visual width, i tracks character in string
+						let siLeft = 0;
+						for (let i = 0; i < leftSpace && siLeft < leftSpace; i++) {
+							const currentChar = leftItem?.content[i];
+							if (
+								leftItem != undefined &&
+								currentChar != undefined &&
+								unicodeWidth(currentChar) > 1 &&
+								siLeft == leftSpace - 2 &&
+								unicodeWidth(leftItem.content) > leftSpace
+							) {
+								write(" \u2026");
+								siLeft++;
+								col++;
+							} else if (
+								leftItem != undefined &&
+								siLeft == leftSpace - 1 &&
+								unicodeWidth(leftItem.content) > leftSpace
+							) {
+								write("\u2026");
+							} else if (
+								siLeft == leftSpace - 1 &&
+								leftItem != undefined &&
+								unicodeWidth(leftItem.content) < leftSpace
+							) {
+								write(" \u001B[0m");
+							} else {
+								write(currentChar ?? " ");
+								if (currentChar != undefined && unicodeWidth(currentChar) > 1) {
+									const diff = unicodeWidth(currentChar) - 1;
+									col += diff;
+									siLeft += diff;
+								}
+							}
+							col++;
+							siLeft++;
+						}
+						write("\u001B[0m");
+						if (selected) {
+							write(" \u001B[1;97m<\u001B[0m");
+						} else {
+							write("  ");
+						}
+						col += 2;
+
+						// Gutter
+						for (let i = 0; i < GUTTER; i++) {
+							write(" ");
+							col++;
+						}
+
+						// Right content
+						let rightItem = this.right[row - MARGIN_VERTICAL];
+						if (rightItem == undefined && this.right[this.right.length - 1]?.wrap) {
+							rightItem = this.right[this.right.length - 1];
+						}
+						if (
+							rightItem != undefined &&
+							(!rightItem.wrap || rightWrapIndex < rightItem.content.length)
+						) {
+							const rightSpace =
+								Math.floor((width - 2 * MARGIN_HORIZONTAL) / 2) - GUTTER / 2;
+							if (rightItem.justify) {
+								const formattingOne = rightItem.formatting?.[0];
+								const formattingTwo = rightItem.formatting?.[1];
+								if (formattingOne != undefined) {
+									write(formattingOne);
+								}
+								for (let i = 0; i <= rightSpace; i++) {
+									if (col >= width - MARGIN_HORIZONTAL) break;
+									const currentChar = rightItem.content[i];
+									if (currentChar == "\t") {
+										write("\u001B[0m");
+										const spaceRemaining = width - MARGIN_HORIZONTAL - col;
+										const padding =
+											spaceRemaining -
+											unicodeWidth(rightItem.content.split("\t")[1] ?? "");
+										if (padding > 0) {
+											for (let j = 0; j < padding; j++) {
+												write(" ");
+												col++;
+											}
+										}
+										if (formattingTwo != undefined) {
+											write(formattingTwo);
+										}
+									} else {
+										write(currentChar ?? " ");
+										col++;
+										if (currentChar != undefined && unicodeWidth(currentChar) > 1) {
+											const diff = unicodeWidth(currentChar) - 1;
+											col += diff;
+											if (col == width - MARGIN_HORIZONTAL - 1) {
+												break;
+											}
+										}
+									}
+								}
+							} else {
+								const formattingOne = rightItem.formatting?.[0];
+								if (formattingOne != undefined) {
+									write(formattingOne);
+								}
+								if (rightItem.center) {
+									const padding = Math.floor(
+										(rightSpace - unicodeWidth(rightItem.content)) / 2
+									);
+									for (let i = 0; i < padding; i++) {
+										write(" ");
+										col++;
+									}
+								}
+								if (rightItem.wrap) {
+									let newline = false;
+									// si tracks visual width, i tracks character in string
+									let si = 0;
+									let finalI = 0;
+									for (let i = 0; i <= rightSpace && si <= rightSpace; i++) {
+										finalI = i;
+										if (col >= width - MARGIN_HORIZONTAL) break;
+										const char = rightItem.content[i + rightWrapIndex];
+										if (char == "\r") {
+											// Ignore spurious carriage-return characters.
+											// This is the same behavior as on the youtube web interface.
+											continue;
+										}
+										if (char == "\n") {
+											newline = true;
+											rightWrapIndex += i + 1;
+											break;
+										}
+										write(char ?? " ");
+										col++;
+										si++;
+										finalI++;
+										if (char != undefined && unicodeWidth(char) > 1) {
+											const diff = unicodeWidth(char) - 1;
+											col += diff;
+											si += diff;
+											if (col == width - MARGIN_HORIZONTAL - 1) {
+												break;
+											}
+										}
+									}
+									if (!newline) {
+										rightWrapIndex += finalI;
+									}
+								} else {
+									for (let i = 0; i <= rightSpace; i++) {
+										if (col >= width - MARGIN_HORIZONTAL) break;
+										const char = rightItem.content[i];
+										if (char == "\n") {
+											break;
+										}
+										write(char ?? " ");
+										col++;
+										if (char != undefined && unicodeWidth(char) > 1) {
+											const diff = unicodeWidth(char) - 1;
+											col += diff;
+											if (col == width - MARGIN_HORIZONTAL - 1) {
+												break;
+											}
+										}
+									}
+								}
+							}
+							write("\u001B[0m");
+						}
+						break;
+					}
+					case Screen.DOWNLOAD_LOGS: {
+						// TODO
+						break;
 					}
 				}
 				write("\n");

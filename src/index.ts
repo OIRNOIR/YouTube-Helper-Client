@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { API } from "./API.ts";
-import Display from "./Display.ts";
-import Downloader from "./Downloader.ts";
+import { Display, Screen } from "./Display.ts";
+import { Downloader } from "./Downloader.ts";
 import type { ConfigFile } from "./types/ConfigFile.ts";
 import type { Video } from "./types/Video.ts";
 import { execAsync, type ToStringAble } from "./util.ts";
@@ -89,29 +89,35 @@ function populateVideoList() {
 }
 
 function refreshKeyLabels() {
-	if (display.downloadQueueOpen) {
-		display.populateKeyLabels([
-			"[ r Retry Failed DL ]",
-			"[ c Retry w/ Cookie ]",
-			"[ l View Logs (messy) ]",
-			"[ e Exit Queue ]",
-			"[ d Delete ]",
-			"[ gg Top ]",
-			"[ q Quit ]"
-		]);
-	} else {
-		display.populateKeyLabels([
-			"[ f Filter ]",
-			"[ d Download ]",
-			"[ o MPV ]",
-			"[ c Copy Link ]",
-			"[ m Mark ]",
-			"[ r Refresh ]",
-			"[ e DL Queue ]",
-			"[ / Search ]",
-			"[ gg Top ]",
-			"[ q Quit ]"
-		]);
+	switch (display.activeScreen) {
+		case Screen.DOWNLOAD_QUEUE: {
+			display.populateKeyLabels([
+				"[ r Retry Failed DL ]",
+				"[ c Retry w/ Cookie ]",
+				"[ l View Logs (messy) ]",
+				"[ e Exit Queue ]",
+				"[ d Delete ]",
+				"[ gg Top ]",
+				"[ q Quit ]"
+			]);
+			break;
+		}
+		case Screen.VIDEO_LIST: {
+			display.populateKeyLabels([
+				"[ f Filter ]",
+				"[ d Download ]",
+				"[ o MPV ]",
+				"[ c Copy Link ]",
+				"[ m Mark ]",
+				"[ r Refresh ]",
+				"[ e DL Queue ]",
+				"[ / Search ]",
+				"[ gg Top ]",
+				"[ q Quit ]"
+			]);
+			break;
+		}
+		// TODO: DOWNLOAD_LOGS
 	}
 }
 
@@ -239,33 +245,45 @@ async function main() {
 	display.writeFrame();
 
 	function upKey() {
-		if (display.downloadQueueOpen) {
-			if (display.downloadQueueSelectedIndex > 0) {
-				display.downloadQueueSelectedIndex--;
-				display.writeFrame();
+		switch (display.activeScreen) {
+			case Screen.DOWNLOAD_QUEUE: {
+				if (display.downloadQueueSelectedIndex > 0) {
+					display.downloadQueueSelectedIndex--;
+					display.writeFrame();
+				}
+				break;
 			}
-		} else {
-			if (display.selectedIndex > 0) {
-				display.selectedIndex--;
-				scrollToSelectedIndex();
+			case Screen.VIDEO_LIST: {
+				if (display.selectedIndex > 0) {
+					display.selectedIndex--;
+					scrollToSelectedIndex();
+				}
+				break;
 			}
+			// TODO: DOWNLOAD_LOGS
 		}
 	}
 
 	function downKey() {
-		if (display.downloadQueueOpen) {
-			if (
-				display.downloadQueueSelectedIndex <
-				display.displayDownloadQueue.length - 1
-			) {
-				display.downloadQueueSelectedIndex++;
-				display.writeFrame();
+		switch (display.activeScreen) {
+			case Screen.DOWNLOAD_QUEUE: {
+				if (
+					display.downloadQueueSelectedIndex <
+					display.displayDownloadQueue.length - 1
+				) {
+					display.downloadQueueSelectedIndex++;
+					display.writeFrame();
+				}
+				break;
 			}
-		} else {
-			if (display.selectedIndex < display.left.length - 1) {
-				display.selectedIndex++;
-				scrollToSelectedIndex();
+			case Screen.VIDEO_LIST: {
+				if (display.selectedIndex < display.left.length - 1) {
+					display.selectedIndex++;
+					scrollToSelectedIndex();
+				}
+				break;
 			}
+			// TODO: DOWNLOAD_LOGS
 		}
 	}
 
@@ -275,315 +293,252 @@ async function main() {
 
 	process.stdin.on("data", async (key: ToStringAble) => {
 		const keyString = key.toString();
-		if (display.downloadQueueOpen) {
-			switch (keyString) {
-				case "\u0003":
-				case "\u0004":
-				case "\u001C":
-				case "q": {
-					// ctrl-c, ctrl-d, or ctrl-\
-					if (
-						QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
-						currentInteractionChar != "q"
-					) {
-						currentInteractionChar = "";
-					}
-					switch (currentInteractionChar) {
-						case "q": {
-							// Confirmation
-							quit();
-							return process.exit();
+		switch (display.activeScreen) {
+			case Screen.DOWNLOAD_QUEUE: {
+				switch (keyString) {
+					case "\u0003":
+					case "\u0004":
+					case "\u001C":
+					case "q": {
+						// ctrl-c, ctrl-d, or ctrl-\
+						if (
+							QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
+							currentInteractionChar != "q"
+						) {
+							currentInteractionChar = "";
 						}
-						case "": {
-							if (downloader.queue.length != downloader.queueIndex) {
-								currentInteractionChar = "q";
-								display.populateKeyLabels([
-									"ARE YOU SURE? DOWNLOAD IN PROGRESS! Press again to confirm"
-								]);
-								display.writeFrame();
-							} else {
+						switch (currentInteractionChar) {
+							case "q": {
+								// Confirmation
 								quit();
 								return process.exit();
 							}
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "g": {
-					switch (currentInteractionChar) {
-						case "": {
-							currentInteractionChar = "g";
-							display.populateKeyLabels(["[ gg Top ]"]);
-							display.writeFrame();
-							break;
-						}
-						case "g": {
-							clearInteractionChar();
-							display.downloadQueueSelectedIndex = 0;
-							display.writeFrame();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "e": {
-					switch (currentInteractionChar) {
-						case "l": {
-							// Exit log view
-							clearInteractionChar(true); // Includes writeFrame
-							break;
-						}
-						case "": {
-							// Close download queue
-							display.downloadQueueOpen = false;
-							refreshKeyLabels();
-							display.writeFrame();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "r": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Retry failed download
-							const selectedData =
-								display.displayDownloadQueue[display.downloadQueueSelectedIndex];
-							if (selectedData == undefined) {
-								display.populateKeyLabels(["Could not find that video"]);
-								display.writeFrame();
-								refreshKeyLabels();
+							case "": {
+								if (downloader.queue.length != downloader.queueIndex) {
+									currentInteractionChar = "q";
+									display.populateKeyLabels([
+										"ARE YOU SURE? DOWNLOAD IN PROGRESS! Press again to confirm"
+									]);
+									display.writeFrame();
+								} else {
+									quit();
+									return process.exit();
+								}
 								break;
 							}
-							if (selectedData.status == "error") selectedData.status = "silenced";
-							downloader.addItem(selectedData);
-							updateDownloaderBar();
-							display.populateKeyLabels(["Added to download queue"]);
-							display.writeFrame();
-							refreshKeyLabels();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "c": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Retry failed download with cookies
-							const selectedData =
-								display.displayDownloadQueue[display.downloadQueueSelectedIndex];
-							if (selectedData == undefined) {
-								display.populateKeyLabels(["Could not find that video"]);
-								display.writeFrame();
-								refreshKeyLabels();
-								break;
-							}
-							if (selectedData.status == "error") selectedData.status = "silenced";
-							downloader.addItem(selectedData, true);
-							updateDownloaderBar();
-							display.populateKeyLabels(["Added to download queue"]);
-							display.writeFrame();
-							refreshKeyLabels();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "l": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Dump logs
-							// TODO: We want to be able to scroll up in this case
-							currentInteractionChar = "l";
-							const selectedData =
-								display.displayDownloadQueue[display.downloadQueueSelectedIndex];
-							if (selectedData == undefined) {
-								display.populateKeyLabels(["Could not find that video"]);
-								display.writeFrame();
-								refreshKeyLabels();
-								break;
-							}
-							if (selectedData.status == "error") selectedData.status = "silenced";
-							updateDownloaderBar();
-							Display.clearScreen();
-							process.stdout.write(selectedData.stdout);
-							process.stdout.write("\nPlease press e to exit.");
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "d": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Delete from queue
-							const selectedData =
-								display.displayDownloadQueue[display.downloadQueueSelectedIndex];
-							if (selectedData == undefined) {
-								display.populateKeyLabels(["Could not find that video"]);
-								display.writeFrame();
-								refreshKeyLabels();
-								break;
-							}
-							const result = downloader.removeItem(display.downloadQueueSelectedIndex);
-							if (result) {
-								updateDownloaderBar();
-								display.populateKeyLabels(["Removed from download queue"]);
-								display.writeFrame();
-								refreshKeyLabels();
-							} else {
-								updateDownloaderBar();
-								display.populateKeyLabels(["Failed to remove from download queue"]);
-								display.writeFrame();
-								refreshKeyLabels();
-							}
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "j": {
-					switch (currentInteractionChar) {
-						case "": {
-							downKey();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "k": {
-					switch (currentInteractionChar) {
-						case "": {
-							upKey();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				default: {
-					clearInteractionChar(true);
-					if (keyString.length == 3) {
-						switch (keyString.charCodeAt(2)) {
-							case 65: {
-								// Up
-								upKey();
-								break;
-							}
-							case 66: {
-								// Down
-								downKey();
-								break;
+							default: {
+								clearInteractionChar(true);
 							}
 						}
-					}
-				}
-			}
-		} else if (display.searchMode) {
-			switch (keyString) {
-				case "\u0003":
-				case "\u0004":
-				case "\u001C": {
-					// ctrl-c, ctrl-d, ctrl-\
-					if (downloader.queue.length != downloader.queueIndex) {
-						// Send the user out of search mode and into normal mode
-						display.searchMode = false;
-						display.writeFrame();
-					} else {
-						quit();
-						return process.exit();
-					}
-					break;
-				}
-				case "\r": {
-					// Enter (carriage return) - Move search buffer into search
-					searchQuery = display.searchBuffer.trim();
-					if (searchQuery.length == 0) {
-						searchQuery = null;
-					}
-					display.searchMode = false;
-					updateHardFilters();
-					populateVideoList();
-					scrollToSelectedIndex();
-					break;
-				}
-				case "\u001B": {
-					// Escape (Leave search mode)
-					display.searchMode = false;
-					display.writeFrame();
-					break;
-				}
-				case "\u007F": {
-					// Backspace
-					display.searchBuffer = display.searchBuffer.slice(
-						0,
-						display.searchBuffer.length - 1
-					);
-					display.writeFrame();
-					break;
-				}
-				default: {
-					//console.log(btoa(keyString));
-					if (keyString.startsWith("\u001B")) {
-						// Starts with escape, disregard because we want to ignore control sequences
 						break;
 					}
-					display.searchBuffer = `${display.searchBuffer}${keyString}`;
-					display.writeFrame();
-				}
-			}
-		} else {
-			switch (keyString) {
-				case "\u0003":
-				case "\u0004":
-				case "\u001C":
-				case "q": {
-					// ctrl-c, ctrl-d, ctrl-\
-					if (
-						QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
-						currentInteractionChar != "q"
-					) {
-						currentInteractionChar = "";
-					}
-					switch (currentInteractionChar) {
-						case "q": {
-							// Confirmation
-							quit();
-							return process.exit();
+					case "g": {
+						switch (currentInteractionChar) {
+							case "": {
+								currentInteractionChar = "g";
+								display.populateKeyLabels(["[ gg Top ]"]);
+								display.writeFrame();
+								break;
+							}
+							case "g": {
+								clearInteractionChar();
+								display.downloadQueueSelectedIndex = 0;
+								display.writeFrame();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
 						}
-						case "": {
+						break;
+					}
+					case "e": {
+						switch (currentInteractionChar) {
+							case "l": {
+								// Exit log view
+								clearInteractionChar(true); // Includes writeFrame
+								break;
+							}
+							case "": {
+								// Close download queue
+								display.activeScreen = Screen.VIDEO_LIST;
+								refreshKeyLabels();
+								display.writeFrame();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "r": {
+						switch (currentInteractionChar) {
+							case "": {
+								// Retry failed download
+								const selectedData =
+									display.displayDownloadQueue[display.downloadQueueSelectedIndex];
+								if (selectedData == undefined) {
+									display.populateKeyLabels(["Could not find that video"]);
+									display.writeFrame();
+									refreshKeyLabels();
+									break;
+								}
+								if (selectedData.status == "error") selectedData.status = "silenced";
+								downloader.addItem(selectedData);
+								updateDownloaderBar();
+								display.populateKeyLabels(["Added to download queue"]);
+								display.writeFrame();
+								refreshKeyLabels();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "c": {
+						switch (currentInteractionChar) {
+							case "": {
+								// Retry failed download with cookies
+								const selectedData =
+									display.displayDownloadQueue[display.downloadQueueSelectedIndex];
+								if (selectedData == undefined) {
+									display.populateKeyLabels(["Could not find that video"]);
+									display.writeFrame();
+									refreshKeyLabels();
+									break;
+								}
+								if (selectedData.status == "error") selectedData.status = "silenced";
+								downloader.addItem(selectedData, true);
+								updateDownloaderBar();
+								display.populateKeyLabels(["Added to download queue"]);
+								display.writeFrame();
+								refreshKeyLabels();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "l": {
+						switch (currentInteractionChar) {
+							case "": {
+								// Dump logs
+								// TODO: We want to be able to scroll up in this case
+								currentInteractionChar = "l";
+								const selectedData =
+									display.displayDownloadQueue[display.downloadQueueSelectedIndex];
+								if (selectedData == undefined) {
+									display.populateKeyLabels(["Could not find that video"]);
+									display.writeFrame();
+									refreshKeyLabels();
+									break;
+								}
+								if (selectedData.status == "error") selectedData.status = "silenced";
+								updateDownloaderBar();
+								Display.clearScreen();
+								process.stdout.write(selectedData.stdout);
+								process.stdout.write("\nPlease press e to exit.");
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "d": {
+						switch (currentInteractionChar) {
+							case "": {
+								// Delete from queue
+								const selectedData =
+									display.displayDownloadQueue[display.downloadQueueSelectedIndex];
+								if (selectedData == undefined) {
+									display.populateKeyLabels(["Could not find that video"]);
+									display.writeFrame();
+									refreshKeyLabels();
+									break;
+								}
+								const result = downloader.removeItem(
+									display.downloadQueueSelectedIndex
+								);
+								if (result) {
+									updateDownloaderBar();
+									display.populateKeyLabels(["Removed from download queue"]);
+									display.writeFrame();
+									refreshKeyLabels();
+								} else {
+									updateDownloaderBar();
+									display.populateKeyLabels(["Failed to remove from download queue"]);
+									display.writeFrame();
+									refreshKeyLabels();
+								}
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "j": {
+						switch (currentInteractionChar) {
+							case "": {
+								downKey();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "k": {
+						switch (currentInteractionChar) {
+							case "": {
+								upKey();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					default: {
+						clearInteractionChar(true);
+						if (keyString.length == 3) {
+							switch (keyString.charCodeAt(2)) {
+								case 65: {
+									// Up
+									upKey();
+									break;
+								}
+								case 66: {
+									// Down
+									downKey();
+									break;
+								}
+							}
+						}
+					}
+				}
+				break;
+			}
+			case Screen.VIDEO_LIST: {
+				if (display.searchMode) {
+					switch (keyString) {
+						case "\u0003":
+						case "\u0004":
+						case "\u001C": {
+							// ctrl-c, ctrl-d, ctrl-\
 							if (downloader.queue.length != downloader.queueIndex) {
-								currentInteractionChar = "q";
-								display.populateKeyLabels([
-									"ARE YOU SURE? DOWNLOAD IN PROGRESS! Press again to confirm"
-								]);
+								// Send the user out of search mode and into normal mode
+								display.searchMode = false;
 								display.writeFrame();
 							} else {
 								quit();
@@ -591,506 +546,582 @@ async function main() {
 							}
 							break;
 						}
+						case "\r": {
+							// Enter (carriage return) - Move search buffer into search
+							searchQuery = display.searchBuffer.trim();
+							if (searchQuery.length == 0) {
+								searchQuery = null;
+							}
+							display.searchMode = false;
+							updateHardFilters();
+							populateVideoList();
+							scrollToSelectedIndex();
+							break;
+						}
+						case "\u001B": {
+							// Escape (Leave search mode)
+							display.searchMode = false;
+							display.writeFrame();
+							break;
+						}
+						case "\u007F": {
+							// Backspace
+							display.searchBuffer = display.searchBuffer.slice(
+								0,
+								display.searchBuffer.length - 1
+							);
+							display.writeFrame();
+							break;
+						}
 						default: {
-							clearInteractionChar(true);
+							//console.log(btoa(keyString));
+							if (keyString.startsWith("\u001B")) {
+								// Starts with escape, disregard because we want to ignore control sequences
+								break;
+							}
+							display.searchBuffer = `${display.searchBuffer}${keyString}`;
+							display.writeFrame();
 						}
 					}
-					break;
-				}
-				case "g": {
-					switch (currentInteractionChar) {
-						case "": {
-							currentInteractionChar = "g";
-							display.populateKeyLabels(["[ gg Top ]"]);
-							display.writeFrame();
+				} else {
+					switch (keyString) {
+						case "\u0003":
+						case "\u0004":
+						case "\u001C":
+						case "q": {
+							// ctrl-c, ctrl-d, ctrl-\
+							if (
+								QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
+								currentInteractionChar != "q"
+							) {
+								currentInteractionChar = "";
+							}
+							switch (currentInteractionChar) {
+								case "q": {
+									// Confirmation
+									quit();
+									return process.exit();
+								}
+								case "": {
+									if (downloader.queue.length != downloader.queueIndex) {
+										currentInteractionChar = "q";
+										display.populateKeyLabels([
+											"ARE YOU SURE? DOWNLOAD IN PROGRESS! Press again to confirm"
+										]);
+										display.writeFrame();
+									} else {
+										quit();
+										return process.exit();
+									}
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
 							break;
 						}
 						case "g": {
-							clearInteractionChar();
-							display.selectedIndex = 0;
-							scrollToSelectedIndex();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "c": {
-					switch (currentInteractionChar) {
-						case "": {
-							const selectedData = data.find(
-								(d) => d.videoId == display.left[display.selectedIndex]?.videoId
-							);
-							if (selectedData == undefined) {
-								display.populateKeyLabels(["Could not copy that video link"]);
-								display.writeFrame();
-								refreshKeyLabels();
-								break;
-							}
-							await writeClipboard(selectedData.url);
-							display.populateKeyLabels(["Copied!"]);
-							display.writeFrame();
-							refreshKeyLabels();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "o": {
-					switch (currentInteractionChar) {
-						case "": {
-							const selectedData = data.find(
-								(d) => d.videoId == display.left[display.selectedIndex]?.videoId
-							);
-							if (selectedData == undefined) {
-								display.populateKeyLabels(["Could not open that video"]);
-								display.writeFrame();
-								refreshKeyLabels();
-								break;
-							}
-							const command = `nohup mpv "${selectedData.url}" </dev/null &>/dev/null &`;
-							await execAsync(command);
-							if (selectedData.unread) {
-								await api.markRead({ read: [selectedData.videoId] });
-								selectedData.unread = false;
-								populateVideoList();
-								if (usingFilterData) {
-									const n = normalData.find((d) => d.videoId == selectedData.videoId);
-									if (n != undefined) n.unread = false;
+							switch (currentInteractionChar) {
+								case "": {
+									currentInteractionChar = "g";
+									display.populateKeyLabels(["[ gg Top ]"]);
+									display.writeFrame();
+									break;
+								}
+								case "g": {
+									clearInteractionChar();
+									display.selectedIndex = 0;
+									scrollToSelectedIndex();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
 								}
 							}
-							display.populateKeyLabels(["Opened!"]);
-							scrollToSelectedIndex();
-							refreshKeyLabels();
 							break;
 						}
-						case "f": {
-							// Filter (Only) Types
-							currentInteractionChar = "fo";
-							display.populateKeyLabels([
-								"[ v Only Videos ]",
-								"[ t Only sTreams ]",
-								"[ s Only Shorts ]"
-							]);
-							display.writeFrame();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "m": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Mark
-							currentInteractionChar = "m";
-							display.populateKeyLabels([
-								"[ r Read ]",
-								"[ u Unread ]",
-								"[ ar All Read ]"
-							]);
-							display.writeFrame();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "a": {
-					switch (currentInteractionChar) {
-						case "m": {
-							// Mark All [Read]
-							currentInteractionChar = "ma";
-							display.populateKeyLabels(["[ r All Read ]"]);
-							display.writeFrame();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "f": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Filter
-							currentInteractionChar = "f";
-							// Eventually add platform filters here
-							display.populateKeyLabels([
-								`[ u ${filterUnread ? "Unfilter" : "Filter"} Unread ]`,
-								"[ t Types ]",
-								"[ o Only Types ]",
-								"[ r Reset (Including Search) ]"
-							]);
-							display.writeFrame();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "t": {
-					switch (currentInteractionChar) {
-						case "f": {
-							// Filter Types
-							currentInteractionChar = "ft";
-							display.populateKeyLabels([
-								`[ v ${filterTypes.video ? "Unfilter" : "Filter"} Videos ]`,
-								`[ t ${filterTypes.stream ? "Unfilter" : "Filter"} sTreams ]`,
-								`[ s ${filterTypes.short ? "Unfilter" : "Filter"} Shorts ]`
-							]);
-							display.writeFrame();
-							break;
-						}
-						case "ft": {
-							// Filter Streams
-							clearInteractionChar();
-							endReached = false;
-							filterTypes.stream = !filterTypes.stream;
-							updateHardFilters();
-							populateVideoList();
-							scrollToSelectedIndex();
-							break;
-						}
-						case "fo": {
-							// Filter Only Streams
-							clearInteractionChar();
-							endReached = false;
-							for (const k of Object.keys(
-								filterTypes
-							) as (keyof typeof filterTypes)[]) {
-								filterTypes[k] = false;
+						case "c": {
+							switch (currentInteractionChar) {
+								case "": {
+									const selectedData = data.find(
+										(d) => d.videoId == display.left[display.selectedIndex]?.videoId
+									);
+									if (selectedData == undefined) {
+										display.populateKeyLabels(["Could not copy that video link"]);
+										display.writeFrame();
+										refreshKeyLabels();
+										break;
+									}
+									await writeClipboard(selectedData.url);
+									display.populateKeyLabels(["Copied!"]);
+									display.writeFrame();
+									refreshKeyLabels();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
 							}
-							filterTypes.stream = true;
-							updateHardFilters();
-							populateVideoList();
-							scrollToSelectedIndex();
 							break;
 						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "v": {
-					switch (currentInteractionChar) {
-						case "ft": {
-							// Filter Videos
-							clearInteractionChar();
-							endReached = false;
-							filterTypes.video = !filterTypes.video;
-							updateHardFilters();
-							populateVideoList();
-							scrollToSelectedIndex();
-							break;
-						}
-						case "fo": {
-							// Filter Only Videos
-							clearInteractionChar();
-							endReached = false;
-							for (const k of Object.keys(
-								filterTypes
-							) as (keyof typeof filterTypes)[]) {
-								filterTypes[k] = false;
+						case "o": {
+							switch (currentInteractionChar) {
+								case "": {
+									const selectedData = data.find(
+										(d) => d.videoId == display.left[display.selectedIndex]?.videoId
+									);
+									if (selectedData == undefined) {
+										display.populateKeyLabels(["Could not open that video"]);
+										display.writeFrame();
+										refreshKeyLabels();
+										break;
+									}
+									const command = `nohup mpv "${selectedData.url}" </dev/null &>/dev/null &`;
+									await execAsync(command);
+									if (selectedData.unread) {
+										await api.markRead({ read: [selectedData.videoId] });
+										selectedData.unread = false;
+										populateVideoList();
+										if (usingFilterData) {
+											const n = normalData.find((d) => d.videoId == selectedData.videoId);
+											if (n != undefined) n.unread = false;
+										}
+									}
+									display.populateKeyLabels(["Opened!"]);
+									scrollToSelectedIndex();
+									refreshKeyLabels();
+									break;
+								}
+								case "f": {
+									// Filter (Only) Types
+									currentInteractionChar = "fo";
+									display.populateKeyLabels([
+										"[ v Only Videos ]",
+										"[ t Only sTreams ]",
+										"[ s Only Shorts ]"
+									]);
+									display.writeFrame();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
 							}
-							filterTypes.video = true;
-							updateHardFilters();
-							populateVideoList();
-							scrollToSelectedIndex();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "s": {
-					switch (currentInteractionChar) {
-						case "ft": {
-							// Filter Shorts
-							clearInteractionChar();
-							endReached = false;
-							filterTypes.short = !filterTypes.short;
-							updateHardFilters();
-							populateVideoList();
-							scrollToSelectedIndex();
-							break;
-						}
-						case "fo": {
-							// Filter Only Shorts
-							clearInteractionChar();
-							endReached = false;
-							for (const k of Object.keys(
-								filterTypes
-							) as (keyof typeof filterTypes)[]) {
-								filterTypes[k] = false;
-							}
-							filterTypes.short = true;
-							updateHardFilters();
-							populateVideoList();
-							scrollToSelectedIndex();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "r": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Refresh
-							const currentlySelectedOldData = data.find(
-								(d) => d.videoId == display.left[display.selectedIndex]?.videoId
-							);
-							if (currentlySelectedOldData != undefined) {
-								display.populateVideoInformation(currentlySelectedOldData);
-							}
-							normalData = [];
-							normalPage = 0;
-							filterData = [];
-							filterPage = 0;
-
-							data = usingFilterData ? filterData : normalData;
-							page = 0;
-
-							endReached = false;
-
-							populateVideoList();
-							display.writeFrame();
 							break;
 						}
 						case "m": {
-							// Mark Read
-							clearInteractionChar();
-							const selectedData = data.find(
-								(d) => d.videoId == display.left[display.selectedIndex]?.videoId
-							);
-							if (selectedData == undefined) {
-								display.populateKeyLabels(["Could not find that video"]);
-								display.writeFrame();
-								refreshKeyLabels();
-								break;
-							}
-							if (selectedData.unread) {
-								await api.markRead({ read: [selectedData.videoId] });
-								selectedData.unread = false;
-								populateVideoList();
-								if (usingFilterData) {
-									const n = normalData.find((d) => d.videoId == selectedData.videoId);
-									if (n != undefined) n.unread = false;
+							switch (currentInteractionChar) {
+								case "": {
+									// Mark
+									currentInteractionChar = "m";
+									display.populateKeyLabels([
+										"[ r Read ]",
+										"[ u Unread ]",
+										"[ ar All Read ]"
+									]);
+									display.writeFrame();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
 								}
 							}
-							scrollToSelectedIndex();
 							break;
 						}
-						case "ma": {
-							// Mark All Read
-							clearInteractionChar();
-							const allUnread = data.filter((v) => v.unread == true);
-							if (allUnread.length > 0) {
-								await api.markRead({ read: allUnread.map((v) => v.videoId) });
-								for (const u of allUnread) {
-									u.unread = false;
-									if (usingFilterData) {
-										const n = normalData.find((d) => d.videoId == u.videoId);
-										if (n != undefined) n.unread = false;
+						case "a": {
+							switch (currentInteractionChar) {
+								case "m": {
+									// Mark All [Read]
+									currentInteractionChar = "ma";
+									display.populateKeyLabels(["[ r All Read ]"]);
+									display.writeFrame();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "f": {
+							switch (currentInteractionChar) {
+								case "": {
+									// Filter
+									currentInteractionChar = "f";
+									// Eventually add platform filters here
+									display.populateKeyLabels([
+										`[ u ${filterUnread ? "Unfilter" : "Filter"} Unread ]`,
+										"[ t Types ]",
+										"[ o Only Types ]",
+										"[ r Reset (Including Search) ]"
+									]);
+									display.writeFrame();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "t": {
+							switch (currentInteractionChar) {
+								case "f": {
+									// Filter Types
+									currentInteractionChar = "ft";
+									display.populateKeyLabels([
+										`[ v ${filterTypes.video ? "Unfilter" : "Filter"} Videos ]`,
+										`[ t ${filterTypes.stream ? "Unfilter" : "Filter"} sTreams ]`,
+										`[ s ${filterTypes.short ? "Unfilter" : "Filter"} Shorts ]`
+									]);
+									display.writeFrame();
+									break;
+								}
+								case "ft": {
+									// Filter Streams
+									clearInteractionChar();
+									endReached = false;
+									filterTypes.stream = !filterTypes.stream;
+									updateHardFilters();
+									populateVideoList();
+									scrollToSelectedIndex();
+									break;
+								}
+								case "fo": {
+									// Filter Only Streams
+									clearInteractionChar();
+									endReached = false;
+									for (const k of Object.keys(
+										filterTypes
+									) as (keyof typeof filterTypes)[]) {
+										filterTypes[k] = false;
+									}
+									filterTypes.stream = true;
+									updateHardFilters();
+									populateVideoList();
+									scrollToSelectedIndex();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "v": {
+							switch (currentInteractionChar) {
+								case "ft": {
+									// Filter Videos
+									clearInteractionChar();
+									endReached = false;
+									filterTypes.video = !filterTypes.video;
+									updateHardFilters();
+									populateVideoList();
+									scrollToSelectedIndex();
+									break;
+								}
+								case "fo": {
+									// Filter Only Videos
+									clearInteractionChar();
+									endReached = false;
+									for (const k of Object.keys(
+										filterTypes
+									) as (keyof typeof filterTypes)[]) {
+										filterTypes[k] = false;
+									}
+									filterTypes.video = true;
+									updateHardFilters();
+									populateVideoList();
+									scrollToSelectedIndex();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "s": {
+							switch (currentInteractionChar) {
+								case "ft": {
+									// Filter Shorts
+									clearInteractionChar();
+									endReached = false;
+									filterTypes.short = !filterTypes.short;
+									updateHardFilters();
+									populateVideoList();
+									scrollToSelectedIndex();
+									break;
+								}
+								case "fo": {
+									// Filter Only Shorts
+									clearInteractionChar();
+									endReached = false;
+									for (const k of Object.keys(
+										filterTypes
+									) as (keyof typeof filterTypes)[]) {
+										filterTypes[k] = false;
+									}
+									filterTypes.short = true;
+									updateHardFilters();
+									populateVideoList();
+									scrollToSelectedIndex();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "r": {
+							switch (currentInteractionChar) {
+								case "": {
+									// Refresh
+									const currentlySelectedOldData = data.find(
+										(d) => d.videoId == display.left[display.selectedIndex]?.videoId
+									);
+									if (currentlySelectedOldData != undefined) {
+										display.populateVideoInformation(currentlySelectedOldData);
+									}
+									normalData = [];
+									normalPage = 0;
+									filterData = [];
+									filterPage = 0;
+
+									data = usingFilterData ? filterData : normalData;
+									page = 0;
+
+									endReached = false;
+
+									populateVideoList();
+									display.writeFrame();
+									break;
+								}
+								case "m": {
+									// Mark Read
+									clearInteractionChar();
+									const selectedData = data.find(
+										(d) => d.videoId == display.left[display.selectedIndex]?.videoId
+									);
+									if (selectedData == undefined) {
+										display.populateKeyLabels(["Could not find that video"]);
+										display.writeFrame();
+										refreshKeyLabels();
+										break;
+									}
+									if (selectedData.unread) {
+										await api.markRead({ read: [selectedData.videoId] });
+										selectedData.unread = false;
+										populateVideoList();
+										if (usingFilterData) {
+											const n = normalData.find((d) => d.videoId == selectedData.videoId);
+											if (n != undefined) n.unread = false;
+										}
+									}
+									scrollToSelectedIndex();
+									break;
+								}
+								case "ma": {
+									// Mark All Read
+									clearInteractionChar();
+									const allUnread = data.filter((v) => v.unread == true);
+									if (allUnread.length > 0) {
+										await api.markRead({ read: allUnread.map((v) => v.videoId) });
+										for (const u of allUnread) {
+											u.unread = false;
+											if (usingFilterData) {
+												const n = normalData.find((d) => d.videoId == u.videoId);
+												if (n != undefined) n.unread = false;
+											}
+										}
+										populateVideoList();
+									}
+									scrollToSelectedIndex();
+									break;
+								}
+								case "f": {
+									// Reset filters
+									clearInteractionChar();
+									endReached = false;
+									for (const k of Object.keys(
+										filterTypes
+									) as (keyof typeof filterTypes)[]) {
+										filterTypes[k] = true;
+									}
+									filterUnread = false;
+									searchQuery = null;
+									updateHardFilters();
+									populateVideoList();
+									scrollToSelectedIndex();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "u": {
+							switch (currentInteractionChar) {
+								case "m": {
+									// Mark Unread
+									clearInteractionChar();
+									const selectedData = data.find(
+										(d) => d.videoId == display.left[display.selectedIndex]?.videoId
+									);
+									if (selectedData == undefined) {
+										display.populateKeyLabels(["Could not find that video"]);
+										display.writeFrame();
+										refreshKeyLabels();
+										break;
+									}
+									if (!selectedData.unread) {
+										await api.markRead({ unread: [selectedData.videoId] });
+										selectedData.unread = true;
+										if (usingFilterData) {
+											const n = normalData.find((d) => d.videoId == selectedData.videoId);
+											if (n != undefined) n.unread = true;
+										}
+										populateVideoList();
+									}
+									scrollToSelectedIndex();
+									break;
+								}
+								case "f": {
+									// Filter unread
+									clearInteractionChar();
+									endReached = false;
+									filterUnread = !filterUnread;
+									updateHardFilters();
+									populateVideoList();
+									scrollToSelectedIndex();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "j": {
+							switch (currentInteractionChar) {
+								case "": {
+									downKey();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "k": {
+							switch (currentInteractionChar) {
+								case "": {
+									upKey();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "d": {
+							switch (currentInteractionChar) {
+								case "": {
+									// Download currently selected video
+									const selectedData = data.find(
+										(d) => d.videoId == display.left[display.selectedIndex]?.videoId
+									);
+									if (selectedData == undefined) {
+										display.populateKeyLabels(["Could not find that video"]);
+										display.writeFrame();
+										refreshKeyLabels();
+										break;
+									}
+									downloader.addItem(selectedData);
+									if (selectedData.unread) {
+										await api.markRead({ read: [selectedData.videoId] });
+										selectedData.unread = false;
+										populateVideoList();
+										if (usingFilterData) {
+											const n = normalData.find((d) => d.videoId == selectedData.videoId);
+											if (n != undefined) n.unread = false;
+										}
+									}
+									updateDownloaderBar();
+									display.populateKeyLabels(["Added to download queue"]);
+									scrollToSelectedIndex();
+									refreshKeyLabels();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "e": {
+							switch (currentInteractionChar) {
+								case "": {
+									// Open download queue
+									display.activeScreen = Screen.DOWNLOAD_QUEUE;
+									display.displayDownloadQueue = downloader.queue;
+									display.downloadQueueScrollOffset = 0;
+									display.downloadQueueSelectedIndex = 0;
+									refreshKeyLabels();
+									display.writeFrame();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "/": {
+							switch (currentInteractionChar) {
+								case "": {
+									// Enter search mode
+									display.searchMode = true;
+									display.searchBuffer = "";
+									refreshKeyLabels();
+									display.writeFrame();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						default: {
+							clearInteractionChar(true);
+							if (keyString.length == 3) {
+								switch (keyString.charCodeAt(2)) {
+									case 65: {
+										// Up
+										upKey();
+										break;
+									}
+									case 66: {
+										// Down
+										downKey();
+										break;
 									}
 								}
-								populateVideoList();
-							}
-							scrollToSelectedIndex();
-							break;
-						}
-						case "f": {
-							// Reset filters
-							clearInteractionChar();
-							endReached = false;
-							for (const k of Object.keys(
-								filterTypes
-							) as (keyof typeof filterTypes)[]) {
-								filterTypes[k] = true;
-							}
-							filterUnread = false;
-							searchQuery = null;
-							updateHardFilters();
-							populateVideoList();
-							scrollToSelectedIndex();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "u": {
-					switch (currentInteractionChar) {
-						case "m": {
-							// Mark Unread
-							clearInteractionChar();
-							const selectedData = data.find(
-								(d) => d.videoId == display.left[display.selectedIndex]?.videoId
-							);
-							if (selectedData == undefined) {
-								display.populateKeyLabels(["Could not find that video"]);
-								display.writeFrame();
-								refreshKeyLabels();
-								break;
-							}
-							if (!selectedData.unread) {
-								await api.markRead({ unread: [selectedData.videoId] });
-								selectedData.unread = true;
-								if (usingFilterData) {
-									const n = normalData.find((d) => d.videoId == selectedData.videoId);
-									if (n != undefined) n.unread = true;
-								}
-								populateVideoList();
-							}
-							scrollToSelectedIndex();
-							break;
-						}
-						case "f": {
-							// Filter unread
-							clearInteractionChar();
-							endReached = false;
-							filterUnread = !filterUnread;
-							updateHardFilters();
-							populateVideoList();
-							scrollToSelectedIndex();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "j": {
-					switch (currentInteractionChar) {
-						case "": {
-							downKey();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "k": {
-					switch (currentInteractionChar) {
-						case "": {
-							upKey();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "d": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Download currently selected video
-							const selectedData = data.find(
-								(d) => d.videoId == display.left[display.selectedIndex]?.videoId
-							);
-							if (selectedData == undefined) {
-								display.populateKeyLabels(["Could not find that video"]);
-								display.writeFrame();
-								refreshKeyLabels();
-								break;
-							}
-							downloader.addItem(selectedData);
-							if (selectedData.unread) {
-								await api.markRead({ read: [selectedData.videoId] });
-								selectedData.unread = false;
-								populateVideoList();
-								if (usingFilterData) {
-									const n = normalData.find((d) => d.videoId == selectedData.videoId);
-									if (n != undefined) n.unread = false;
-								}
-							}
-							updateDownloaderBar();
-							display.populateKeyLabels(["Added to download queue"]);
-							scrollToSelectedIndex();
-							refreshKeyLabels();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "e": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Open download queue
-							display.downloadQueueOpen = true;
-							display.displayDownloadQueue = downloader.queue;
-							display.downloadQueueScrollOffset = 0;
-							display.downloadQueueSelectedIndex = 0;
-							refreshKeyLabels();
-							display.writeFrame();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				case "/": {
-					switch (currentInteractionChar) {
-						case "": {
-							// Enter search mode
-							display.searchMode = true;
-							display.searchBuffer = "";
-							refreshKeyLabels();
-							display.writeFrame();
-							break;
-						}
-						default: {
-							clearInteractionChar(true);
-						}
-					}
-					break;
-				}
-				default: {
-					clearInteractionChar(true);
-					if (keyString.length == 3) {
-						switch (keyString.charCodeAt(2)) {
-							case 65: {
-								// Up
-								upKey();
-								break;
-							}
-							case 66: {
-								// Down
-								downKey();
-								break;
 							}
 						}
 					}
 				}
+				break;
+			}
+			case Screen.DOWNLOAD_LOGS: {
+				// TODO
+				break;
 			}
 		}
 	});

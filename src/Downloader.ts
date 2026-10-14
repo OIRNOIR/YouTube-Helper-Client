@@ -21,7 +21,7 @@ interface DownloaderEvents {
 	downloaderOutput: [line: string]; // Verbose
 }
 
-export default class Downloader extends EventEmitter<DownloaderEvents> {
+export class Downloader extends EventEmitter<DownloaderEvents> {
 	queue: DownloadVideo[];
 	queueIndex: number;
 	private downloadsDir: string;
