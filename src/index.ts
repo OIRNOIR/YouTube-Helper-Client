@@ -213,6 +213,17 @@ async function main() {
 		display.writeFrame();
 	});
 
+	downloader.on("downloaderOutput", () => {
+		if (display.activeScreen == Screen.DOWNLOAD_LOGS) {
+			const selectedData =
+				display.displayDownloadQueue[display.downloadQueueSelectedIndex];
+			if (selectedData != undefined) {
+				display.downloadLogBuffer = selectedData.stdout;
+				display.writeFrame();
+			}
+		}
+	});
+
 	display.on("needsData", async () => {
 		if (endReached) return;
 		page++;
