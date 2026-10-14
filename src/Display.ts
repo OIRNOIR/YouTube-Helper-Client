@@ -1,6 +1,7 @@
 import EventEmitter from "node:events";
 import process from "node:process";
 import { unicodeWidth } from "@std/cli";
+import ansiRegex from "ansi-regex";
 import emojiRegex from "emoji-regex";
 import type { DownloadVideo } from "./Downloader.ts";
 import type { Video } from "./types/Video.ts";
@@ -13,6 +14,10 @@ const SCROLL_BUFFER = 3;
 
 interface DisplayEvents {
 	needsData: [];
+}
+
+function trueUnicodeWidth(str: string) {
+	return unicodeWidth(str.replaceAll(ansiRegex(), ""));
 }
 
 export enum Screen {
@@ -52,6 +57,9 @@ export class Display extends EventEmitter<DisplayEvents> {
 	searchMode: boolean;
 	searchBuffer: string;
 
+	downloadLogBuffer: string;
+	downloadLogOffsetFromBottom: number;
+
 	constructor() {
 		super();
 		this.activeScreen = Screen.VIDEO_LIST;
@@ -72,6 +80,15 @@ export class Display extends EventEmitter<DisplayEvents> {
 
 		this.searchMode = false;
 		this.searchBuffer = "";
+
+		this.downloadLogBuffer = "";
+		this.downloadLogOffsetFromBottom = 0;
+	}
+
+	get maxDownloadLogOffset() {
+		const { rows: height } = Deno.consoleSize();
+		const lines = this.downloadLogBuffer.split("\n").length;
+		return lines - (height - 3 * MARGIN_VERTICAL - 1);
 	}
 
 	populateVideoList(data: Video[]) {
@@ -240,6 +257,30 @@ export class Display extends EventEmitter<DisplayEvents> {
 		}
 
 		let rightWrapIndex = 0;
+
+		const splitDownloadLogBuffer = this.downloadLogBuffer
+			.split("\n")
+			.flatMap((l) => {
+				const lines = [l];
+				while (
+					trueUnicodeWidth(lines[lines.length - 1]) >
+					width - 2 * MARGIN_HORIZONTAL
+				) {
+					const line = lines[lines.length - 1];
+					let splicedBeforeLength = line.length;
+					while (
+						trueUnicodeWidth(line.slice(0, splicedBeforeLength)) >
+						width - 2 * MARGIN_HORIZONTAL
+					) {
+						splicedBeforeLength--;
+					}
+					const splicedBefore = line.slice(0, splicedBeforeLength);
+					const splicedAfter = line.slice(splicedBeforeLength, line.length);
+					lines[lines.length - 1] = splicedBefore;
+					lines.push(splicedAfter);
+				}
+				return lines;
+			});
 
 		for (let row = 0; row < height; row++) {
 			let col = 0;
@@ -631,7 +672,24 @@ export class Display extends EventEmitter<DisplayEvents> {
 						break;
 					}
 					case Screen.DOWNLOAD_LOGS: {
-						// TODO
+						const lineCount = height - 3 * MARGIN_VERTICAL - 2;
+						const linesSelected = splitDownloadLogBuffer.slice(
+							-1 - this.downloadLogOffsetFromBottom - lineCount,
+							-1 - this.downloadLogOffsetFromBottom
+						);
+						const item = linesSelected[row - MARGIN_VERTICAL];
+						const space = width - MARGIN_HORIZONTAL * 2;
+						if (item != undefined) {
+							let trimmedItem = item;
+							let visualWidth = trueUnicodeWidth(trimmedItem);
+							while (visualWidth > space) {
+								trimmedItem = item.slice(0, trimmedItem.length - 1);
+								visualWidth = trueUnicodeWidth(trimmedItem);
+							}
+							write(trimmedItem);
+							col += visualWidth;
+						}
+						if (row == height - MARGIN_VERTICAL * 2 - 3) write("\u001B[0m");
 						break;
 					}
 				}

@@ -8,6 +8,7 @@
 	"imports": {
 		"@biomejs/biome": "npm:@biomejs/biome@2.5.15",
 		"@std/cli": "jsr:@std/cli@1.0.32",
+		"ansi-regex": "npm:ansi-regex@6.4.0",
 		"emoji-regex": "npm:emoji-regex@11.0.0"
 	},
 	"permissions": {

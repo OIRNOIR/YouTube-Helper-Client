@@ -117,7 +117,15 @@ function refreshKeyLabels() {
 			]);
 			break;
 		}
-		// TODO: DOWNLOAD_LOGS
+		case Screen.DOWNLOAD_LOGS: {
+			display.populateKeyLabels([
+				"[ e DL Queue ]",
+				"[ gg Top ]",
+				"[ G Bottom ]",
+				"[ q Quit ]"
+			]);
+			break;
+		}
 	}
 }
 
@@ -260,7 +268,13 @@ async function main() {
 				}
 				break;
 			}
-			// TODO: DOWNLOAD_LOGS
+			case Screen.DOWNLOAD_LOGS: {
+				if (display.downloadLogOffsetFromBottom < display.maxDownloadLogOffset) {
+					display.downloadLogOffsetFromBottom++;
+					display.writeFrame();
+				}
+				break;
+			}
 		}
 	}
 
@@ -283,7 +297,13 @@ async function main() {
 				}
 				break;
 			}
-			// TODO: DOWNLOAD_LOGS
+			case Screen.DOWNLOAD_LOGS: {
+				if (display.downloadLogOffsetFromBottom > 0) {
+					display.downloadLogOffsetFromBottom--;
+					display.writeFrame();
+				}
+				break;
+			}
 		}
 	}
 
@@ -427,9 +447,7 @@ async function main() {
 					case "l": {
 						switch (currentInteractionChar) {
 							case "": {
-								// Dump logs
-								// TODO: We want to be able to scroll up in this case
-								currentInteractionChar = "l";
+								// Enter log view
 								const selectedData =
 									display.displayDownloadQueue[display.downloadQueueSelectedIndex];
 								if (selectedData == undefined) {
@@ -439,10 +457,12 @@ async function main() {
 									break;
 								}
 								if (selectedData.status == "error") selectedData.status = "silenced";
+								display.activeScreen = Screen.DOWNLOAD_LOGS;
+								display.downloadLogBuffer = selectedData.stdout;
+								display.downloadLogOffsetFromBottom = 0;
 								updateDownloaderBar();
-								Display.clearScreen();
-								process.stdout.write(selectedData.stdout);
-								process.stdout.write("\nPlease press e to exit.");
+								refreshKeyLabels();
+								display.writeFrame();
 								break;
 							}
 							default: {
@@ -1120,7 +1140,135 @@ async function main() {
 				break;
 			}
 			case Screen.DOWNLOAD_LOGS: {
-				// TODO
+				switch (keyString) {
+					case "\u0003":
+					case "\u0004":
+					case "\u001C":
+					case "q": {
+						// ctrl-c, ctrl-d, or ctrl-\
+						if (
+							QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
+							currentInteractionChar != "q"
+						) {
+							currentInteractionChar = "";
+						}
+						switch (currentInteractionChar) {
+							case "q": {
+								// Confirmation
+								quit();
+								return process.exit();
+							}
+							case "": {
+								if (downloader.queue.length != downloader.queueIndex) {
+									currentInteractionChar = "q";
+									display.populateKeyLabels([
+										"ARE YOU SURE? DOWNLOAD IN PROGRESS! Press again to confirm"
+									]);
+									display.writeFrame();
+								} else {
+									quit();
+									return process.exit();
+								}
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "g": {
+						switch (currentInteractionChar) {
+							case "": {
+								currentInteractionChar = "g";
+								display.populateKeyLabels(["[ gg Top ]"]);
+								display.writeFrame();
+								break;
+							}
+							case "g": {
+								clearInteractionChar();
+								display.downloadLogOffsetFromBottom = display.maxDownloadLogOffset;
+								display.writeFrame();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "G": {
+						switch (currentInteractionChar) {
+							case "": {
+								clearInteractionChar();
+								display.downloadLogOffsetFromBottom = 0;
+								display.writeFrame();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "l":
+					case "e": {
+						switch (currentInteractionChar) {
+							case "": {
+								// Exit log view
+								display.activeScreen = Screen.DOWNLOAD_QUEUE;
+								refreshKeyLabels();
+								display.writeFrame();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "j": {
+						switch (currentInteractionChar) {
+							case "": {
+								downKey();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "k": {
+						switch (currentInteractionChar) {
+							case "": {
+								upKey();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					default: {
+						clearInteractionChar(true);
+						if (keyString.length == 3) {
+							switch (keyString.charCodeAt(2)) {
+								case 65: {
+									// Up
+									upKey();
+									break;
+								}
+								case 66: {
+									// Down
+									downKey();
+									break;
+								}
+							}
+						}
+					}
+				}
 				break;
 			}
 		}

@@ -5,6 +5,7 @@
     "jsr:@std/fmt@^1.0.10": "1.0.10",
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "npm:@biomejs/biome@2.5.15": "2.5.15",
+    "npm:ansi-regex@6.4.0": "6.4.0",
     "npm:emoji-regex@11.0.0": "11.0.0"
   },
   "jsr": {
@@ -77,6 +78,9 @@
       "os": ["win32"],
       "cpu": ["x64"]
     },
+    "ansi-regex@6.4.0": {
+      "integrity": "sha512-KzTVk2tCWAHtYrvvvaP8bJKJq2pVinhLcGEQdtLIYPbmNGNyYe8QwNaTUYQp2J7/vIsUKt5QCqAfUkYyG9DkOw=="
+    },
     "emoji-regex@11.0.0": {
       "integrity": "sha512-2qQtc7syPcJmvF7BfKxBvwgvhzDth6u3q23+Jr4JOQUcmMGgmj7B4/ePZ2DmOhrrb77S8kMNHq2kilVASysfqA=="
     }
@@ -85,6 +89,7 @@
     "dependencies": [
       "jsr:@std/cli@1.0.32",
       "npm:@biomejs/biome@2.5.15",
+      "npm:ansi-regex@6.4.0",
       "npm:emoji-regex@11.0.0"
     ]
   }
