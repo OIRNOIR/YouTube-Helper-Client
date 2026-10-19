@@ -125,12 +125,17 @@ export class Display extends EventEmitter<DisplayEvents> {
 			};
 		});
 		if (selectedVideoId != undefined) {
-			this.selectedIndex = this.left.findIndex(
+			const newSelectedIndex = this.left.findIndex(
 				(i) => i.videoId == selectedVideoId
 			);
-		}
-		if (this.selectedIndex == -1 || selectedVideoId == undefined) {
+			if (newSelectedIndex != -1) this.selectedIndex = newSelectedIndex;
+		} else {
+			// The video list has been cleared
 			this.selectedIndex = 0;
+		}
+		if (this.selectedIndex >= this.left.length) {
+			// selected index is now out of range
+			this.selectedIndex = Math.max(this.left.length - 1, 0);
 		}
 		this.emittedNeedsData = false;
 	}
@@ -228,6 +233,11 @@ export class Display extends EventEmitter<DisplayEvents> {
 		});
 	}
 
+	get pageHeight() {
+		const { rows: height } = Deno.consoleSize();
+		return height - MARGIN_VERTICAL * 3 - 3;
+	}
+
 	writeFrame() {
 		let stdout = Display.clearScreenText;
 		function write(str: string) {
@@ -238,22 +248,56 @@ export class Display extends EventEmitter<DisplayEvents> {
 
 		let screenScrollTop = 0;
 		let screenScrollBottom = 0;
+		const displayScrollQueue =
+			this.activeScreen == Screen.DOWNLOAD_QUEUE
+				? this.displayDownloadQueue
+				: this.left;
+		const maxScrollOffset =
+			displayScrollQueue.length - height + MARGIN_VERTICAL * 3 + 2;
 
 		function calculateScrollBounds(selectedIndex: number, scrollOffset: number) {
 			screenScrollTop = selectedIndex - scrollOffset;
 			screenScrollBottom = height - MARGIN_VERTICAL * 3 - 3 - screenScrollTop;
 		}
 
-		calculateScrollBounds(this.selectedIndex, this.scrollOffset);
+		const selectedIndex =
+			this.activeScreen == Screen.DOWNLOAD_QUEUE
+				? this.downloadQueueSelectedIndex
+				: this.selectedIndex;
+		let scrollOffset =
+			this.activeScreen == Screen.DOWNLOAD_QUEUE
+				? this.downloadQueueScrollOffset
+				: this.scrollOffset;
 
-		while (screenScrollTop < SCROLL_BUFFER && this.scrollOffset > 0) {
-			this.scrollOffset--;
-			calculateScrollBounds(this.selectedIndex, this.scrollOffset);
+		const endlessScrollPossible = this.activeScreen == Screen.VIDEO_LIST;
+
+		calculateScrollBounds(selectedIndex, scrollOffset);
+
+		while (screenScrollTop < SCROLL_BUFFER && scrollOffset > 0) {
+			scrollOffset--;
+			calculateScrollBounds(selectedIndex, scrollOffset);
 		}
 
-		while (screenScrollBottom < SCROLL_BUFFER) {
-			this.scrollOffset++;
-			calculateScrollBounds(this.selectedIndex, this.scrollOffset);
+		while (
+			screenScrollBottom < SCROLL_BUFFER &&
+			(endlessScrollPossible || scrollOffset < maxScrollOffset)
+		) {
+			scrollOffset++;
+			calculateScrollBounds(selectedIndex, scrollOffset);
+		}
+
+		switch (this.activeScreen) {
+			case Screen.VIDEO_LIST: {
+				this.scrollOffset = scrollOffset;
+				break;
+			}
+			case Screen.DOWNLOAD_QUEUE: {
+				this.downloadQueueScrollOffset = scrollOffset;
+				break;
+			}
+			default: {
+				// Nothing atm
+			}
 		}
 
 		let rightWrapIndex = 0;

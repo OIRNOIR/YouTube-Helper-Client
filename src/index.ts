@@ -97,7 +97,6 @@ function refreshKeyLabels() {
 				"[ l View Logs (messy) ]",
 				"[ e Exit Queue ]",
 				"[ d Delete ]",
-				"[ gg Top ]",
 				"[ q Quit ]"
 			]);
 			break;
@@ -112,18 +111,12 @@ function refreshKeyLabels() {
 				"[ r Refresh ]",
 				"[ e DL Queue ]",
 				"[ / Search ]",
-				"[ gg Top ]",
 				"[ q Quit ]"
 			]);
 			break;
 		}
 		case Screen.DOWNLOAD_LOGS: {
-			display.populateKeyLabels([
-				"[ e DL Queue ]",
-				"[ gg Top ]",
-				"[ G Bottom ]",
-				"[ q Quit ]"
-			]);
+			display.populateKeyLabels(["[ e DL Queue ]", "[ q Quit ]"]);
 			break;
 		}
 	}
@@ -263,6 +256,99 @@ async function main() {
 
 	display.writeFrame();
 
+	function homeKey() {
+		switch (display.activeScreen) {
+			case Screen.DOWNLOAD_QUEUE: {
+				const newOffset = 0;
+				if (newOffset != display.downloadQueueSelectedIndex) {
+					display.downloadQueueSelectedIndex = newOffset;
+					display.writeFrame();
+				}
+				break;
+			}
+			case Screen.VIDEO_LIST: {
+				const newOffset = 0;
+				if (newOffset != display.selectedIndex) {
+					display.selectedIndex = newOffset;
+					scrollToSelectedIndex();
+				}
+				break;
+			}
+			case Screen.DOWNLOAD_LOGS: {
+				const newOffset = display.maxDownloadLogOffset;
+				if (newOffset != display.downloadLogOffsetFromBottom) {
+					display.downloadLogOffsetFromBottom = newOffset;
+					display.writeFrame();
+				}
+				break;
+			}
+		}
+	}
+
+	function endKey() {
+		switch (display.activeScreen) {
+			case Screen.DOWNLOAD_QUEUE: {
+				const newOffset = display.displayDownloadQueue.length - 1;
+				if (newOffset != display.downloadQueueSelectedIndex) {
+					display.downloadQueueSelectedIndex = newOffset;
+					display.writeFrame();
+				}
+				break;
+			}
+			case Screen.VIDEO_LIST: {
+				const newOffset = display.left.length - 1;
+				if (newOffset != display.selectedIndex) {
+					display.selectedIndex = newOffset;
+					scrollToSelectedIndex();
+				}
+				break;
+			}
+			case Screen.DOWNLOAD_LOGS: {
+				const newOffset = 0;
+				if (newOffset != display.downloadLogOffsetFromBottom) {
+					display.downloadLogOffsetFromBottom = newOffset;
+					display.writeFrame();
+				}
+				break;
+			}
+		}
+	}
+
+	function pageUpKey() {
+		switch (display.activeScreen) {
+			case Screen.DOWNLOAD_QUEUE: {
+				const newOffset = Math.max(
+					0,
+					display.downloadQueueSelectedIndex - display.pageHeight
+				);
+				if (newOffset != display.downloadQueueSelectedIndex) {
+					display.downloadQueueSelectedIndex = newOffset;
+					display.writeFrame();
+				}
+				break;
+			}
+			case Screen.VIDEO_LIST: {
+				const newOffset = Math.max(0, display.selectedIndex - display.pageHeight);
+				if (newOffset != display.selectedIndex) {
+					display.selectedIndex = newOffset;
+					scrollToSelectedIndex();
+				}
+				break;
+			}
+			case Screen.DOWNLOAD_LOGS: {
+				const newOffset = Math.min(
+					display.maxDownloadLogOffset,
+					display.downloadLogOffsetFromBottom + display.pageHeight
+				);
+				if (newOffset != display.downloadLogOffsetFromBottom) {
+					display.downloadLogOffsetFromBottom = newOffset;
+					display.writeFrame();
+				}
+				break;
+			}
+		}
+	}
+
 	function upKey() {
 		switch (display.activeScreen) {
 			case Screen.DOWNLOAD_QUEUE: {
@@ -282,6 +368,44 @@ async function main() {
 			case Screen.DOWNLOAD_LOGS: {
 				if (display.downloadLogOffsetFromBottom < display.maxDownloadLogOffset) {
 					display.downloadLogOffsetFromBottom++;
+					display.writeFrame();
+				}
+				break;
+			}
+		}
+	}
+
+	function pageDownKey() {
+		switch (display.activeScreen) {
+			case Screen.DOWNLOAD_QUEUE: {
+				const newOffset = Math.min(
+					display.displayDownloadQueue.length - 1,
+					display.downloadQueueSelectedIndex + display.pageHeight
+				);
+				if (newOffset != display.downloadQueueSelectedIndex) {
+					display.downloadQueueSelectedIndex = newOffset;
+					display.writeFrame();
+				}
+				break;
+			}
+			case Screen.VIDEO_LIST: {
+				const newOffset = Math.min(
+					display.left.length - 1,
+					display.selectedIndex + display.pageHeight
+				);
+				if (newOffset != display.selectedIndex) {
+					display.selectedIndex = newOffset;
+					scrollToSelectedIndex();
+				}
+				break;
+			}
+			case Screen.DOWNLOAD_LOGS: {
+				const newOffset = Math.max(
+					0,
+					display.downloadLogOffsetFromBottom - display.pageHeight
+				);
+				if (newOffset != display.downloadLogOffsetFromBottom) {
+					display.downloadLogOffsetFromBottom = newOffset;
 					display.writeFrame();
 				}
 				break;
@@ -328,10 +452,9 @@ async function main() {
 			case Screen.DOWNLOAD_QUEUE: {
 				switch (keyString) {
 					case "\u0003":
-					case "\u0004":
 					case "\u001C":
 					case "q": {
-						// ctrl-c, ctrl-d, or ctrl-\
+						// ctrl-c, or ctrl-\
 						if (
 							QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
 							currentInteractionChar != "q"
@@ -363,6 +486,40 @@ async function main() {
 						}
 						break;
 					}
+					case "\u0015":
+					case "\u001B[5~": {
+						// Ctrl+u
+						// Page Up
+						switch (currentInteractionChar) {
+							case "": {
+								clearInteractionChar();
+								pageUpKey();
+								scrollToSelectedIndex();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "\u0004":
+					case "\u001B[6~": {
+						// Ctrl+d
+						// Page Down
+						switch (currentInteractionChar) {
+							case "": {
+								clearInteractionChar();
+								pageDownKey();
+								scrollToSelectedIndex();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
 					case "g": {
 						switch (currentInteractionChar) {
 							case "": {
@@ -373,8 +530,51 @@ async function main() {
 							}
 							case "g": {
 								clearInteractionChar();
-								display.downloadQueueSelectedIndex = 0;
-								display.writeFrame();
+								homeKey();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "G": {
+						switch (currentInteractionChar) {
+							case "": {
+								// Go to bottom
+								clearInteractionChar();
+								endKey();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "\u001B[H": {
+						// Home
+						switch (currentInteractionChar) {
+							case "": {
+								// Go to the top
+								clearInteractionChar();
+								homeKey();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "\u001B[F": {
+						// End
+						switch (currentInteractionChar) {
+							case "": {
+								// Go to the bottom
+								clearInteractionChar();
+								endKey();
 								break;
 							}
 							default: {
@@ -567,14 +767,9 @@ async function main() {
 						case "\u0004":
 						case "\u001C": {
 							// ctrl-c, ctrl-d, ctrl-\
-							if (downloader.queue.length != downloader.queueIndex) {
-								// Send the user out of search mode and into normal mode
-								display.searchMode = false;
-								display.writeFrame();
-							} else {
-								quit();
-								return process.exit();
-							}
+							// Send the user out of search mode and into normal mode
+							display.searchMode = false;
+							display.writeFrame();
 							break;
 						}
 						case "\r": {
@@ -605,7 +800,6 @@ async function main() {
 							break;
 						}
 						default: {
-							//console.log(btoa(keyString));
 							if (keyString.startsWith("\u001B")) {
 								// Starts with escape, disregard because we want to ignore control sequences
 								break;
@@ -617,10 +811,9 @@ async function main() {
 				} else {
 					switch (keyString) {
 						case "\u0003":
-						case "\u0004":
 						case "\u001C":
 						case "q": {
-							// ctrl-c, ctrl-d, ctrl-\
+							// ctrl-c, ctrl-\
 							if (
 								QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
 								currentInteractionChar != "q"
@@ -652,6 +845,40 @@ async function main() {
 							}
 							break;
 						}
+						case "\u0015":
+						case "\u001B[5~": {
+							// Ctrl+u
+							// Page Up
+							switch (currentInteractionChar) {
+								case "": {
+									clearInteractionChar();
+									pageUpKey();
+									scrollToSelectedIndex();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "\u0004":
+						case "\u001B[6~": {
+							// Ctrl+d
+							// Page Down
+							switch (currentInteractionChar) {
+								case "": {
+									clearInteractionChar();
+									pageDownKey();
+									scrollToSelectedIndex();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
 						case "g": {
 							switch (currentInteractionChar) {
 								case "": {
@@ -662,8 +889,51 @@ async function main() {
 								}
 								case "g": {
 									clearInteractionChar();
-									display.selectedIndex = 0;
-									scrollToSelectedIndex();
+									homeKey();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "G": {
+							switch (currentInteractionChar) {
+								case "": {
+									// Go to bottom
+									clearInteractionChar();
+									endKey();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "\u001B[H": {
+							// Home
+							switch (currentInteractionChar) {
+								case "": {
+									// Go to the top
+									clearInteractionChar();
+									homeKey();
+									break;
+								}
+								default: {
+									clearInteractionChar(true);
+								}
+							}
+							break;
+						}
+						case "\u001B[F": {
+							// End
+							switch (currentInteractionChar) {
+								case "": {
+									// Go to the bottom
+									clearInteractionChar();
+									endKey();
 									break;
 								}
 								default: {
@@ -1153,10 +1423,9 @@ async function main() {
 			case Screen.DOWNLOAD_LOGS: {
 				switch (keyString) {
 					case "\u0003":
-					case "\u0004":
 					case "\u001C":
 					case "q": {
-						// ctrl-c, ctrl-d, or ctrl-\
+						// ctrl-c, or ctrl-\
 						if (
 							QUIT_CHAR_SEQUENCES.indexOf(keyString) != -1 &&
 							currentInteractionChar != "q"
@@ -1188,6 +1457,40 @@ async function main() {
 						}
 						break;
 					}
+					case "\u0015":
+					case "\u001B[5~": {
+						// Ctrl+u
+						// Page Up
+						switch (currentInteractionChar) {
+							case "": {
+								clearInteractionChar();
+								pageUpKey();
+								scrollToSelectedIndex();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "\u0004":
+					case "\u001B[6~": {
+						// Ctrl+d
+						// Page Down
+						switch (currentInteractionChar) {
+							case "": {
+								clearInteractionChar();
+								pageDownKey();
+								scrollToSelectedIndex();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
 					case "g": {
 						switch (currentInteractionChar) {
 							case "": {
@@ -1198,8 +1501,7 @@ async function main() {
 							}
 							case "g": {
 								clearInteractionChar();
-								display.downloadLogOffsetFromBottom = display.maxDownloadLogOffset;
-								display.writeFrame();
+								homeKey();
 								break;
 							}
 							default: {
@@ -1212,8 +1514,37 @@ async function main() {
 						switch (currentInteractionChar) {
 							case "": {
 								clearInteractionChar();
-								display.downloadLogOffsetFromBottom = 0;
-								display.writeFrame();
+								endKey();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "\u001B[H": {
+						// Home
+						switch (currentInteractionChar) {
+							case "": {
+								// Go to the top
+								clearInteractionChar();
+								homeKey();
+								break;
+							}
+							default: {
+								clearInteractionChar(true);
+							}
+						}
+						break;
+					}
+					case "\u001B[F": {
+						// End
+						switch (currentInteractionChar) {
+							case "": {
+								// Go to the bottom
+								clearInteractionChar();
+								endKey();
 								break;
 							}
 							default: {
