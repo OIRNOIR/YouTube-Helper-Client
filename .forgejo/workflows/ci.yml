@@ -3,50 +3,50 @@ name: CI Pipeline
 enable-email-notifications: true
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-    types: [opened, synchronize]
-  merge_group:
+    push:
+        branches: ["main"]
+    pull_request:
+        types: [opened, synchronize]
+    merge_group:
 
 jobs:
-  typecheck:
-    name: Typecheck
-    timeout-minutes: 15
-    runs-on: deno
-    steps:
-      - name: Log Deno Version
-        run: deno --version
+    typecheck:
+        name: Typecheck
+        timeout-minutes: 15
+        runs-on: deno
+        steps:
+            - name: Log Deno Version
+              run: deno --version
 
-      - name: Check out code
-        uses: actions/checkout@v7.0.1
-        with:
-          submodules: true
+            - name: Check out code
+              uses: actions/checkout@v7.0.1
+              with:
+                  submodules: true
 
-      - name: Install dependencies
-        run: deno install
-        shell: bash
+            - name: Install dependencies
+              run: deno install
+              shell: bash
 
-      - name: Run Check
-        run: deno task typecheck
-        env:
-          CI: 1
+            - name: Run Check
+              run: deno task typecheck
+              env:
+                  CI: 1
 
-  stylecheck:
-    name: Style Check
-    timeout-minutes: 15
-    runs-on: deno
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7.0.1
-        with:
-          submodules: true
+    stylecheck:
+        name: Style Check
+        timeout-minutes: 15
+        runs-on: deno
+        steps:
+            - name: Check out code
+              uses: actions/checkout@v7.0.1
+              with:
+                  submodules: true
 
-      - name: Install dependencies
-        run: deno install
-        shell: bash
+            - name: Install dependencies
+              run: deno install
+              shell: bash
 
-      - name: Run Check
-        run: deno task style:check
-        env:
-          CI: 1
+            - name: Run Check
+              run: deno task style:check
+              env:
+                  CI: 1
