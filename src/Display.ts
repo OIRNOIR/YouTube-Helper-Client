@@ -1,8 +1,8 @@
 import EventEmitter from "node:events";
 import process from "node:process";
-import { unicodeWidth } from "@std/cli";
 import ansiRegex from "ansi-regex";
 import emojiRegex from "emoji-regex";
+import unicodeWidth from "string-width";
 import type { DownloadVideo } from "./Downloader.ts";
 import type { Video } from "./types/Video.ts";
 import { msToShort, timestampToRelativeString } from "./util.ts";
