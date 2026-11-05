@@ -7,7 +7,7 @@
 	},
 	"imports": {
 		"@biomejs/biome": "npm:@biomejs/biome@2.6.4",
-		"ansi-regex": "npm:ansi-regex@6.4.0",
+		"ansi-regex": "npm:ansi-regex@6.5.0",
 		"emoji-regex": "npm:emoji-regex@11.0.0",
 		"string-width": "npm:string-width@8.3.0"
 	},

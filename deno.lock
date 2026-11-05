@@ -2,7 +2,7 @@
   "version": "5",
   "specifiers": {
     "npm:@biomejs/biome@2.6.4": "2.6.4",
-    "npm:ansi-regex@6.4.0": "6.4.0",
+    "npm:ansi-regex@6.5.0": "6.5.0",
     "npm:emoji-regex@11.0.0": "11.0.0",
     "npm:string-width@8.3.0": "8.3.0"
   },
@@ -73,8 +73,8 @@
       "os": ["win32"],
       "cpu": ["x64"]
     },
-    "ansi-regex@6.4.0": {
-      "integrity": "sha512-KzTVk2tCWAHtYrvvvaP8bJKJq2pVinhLcGEQdtLIYPbmNGNyYe8QwNaTUYQp2J7/vIsUKt5QCqAfUkYyG9DkOw=="
+    "ansi-regex@6.5.0": {
+      "integrity": "sha512-zhvbbbdt1kbw7EJ9OQoxmQcuaNR9P5kTj7e/YdmOSU10aHWbycofJxA6jKfoEy3vlLdctOF9ZHaxLtmSm998wQ=="
     },
     "emoji-regex@11.0.0": {
       "integrity": "sha512-2qQtc7syPcJmvF7BfKxBvwgvhzDth6u3q23+Jr4JOQUcmMGgmj7B4/ePZ2DmOhrrb77S8kMNHq2kilVASysfqA=="
@@ -99,7 +99,7 @@
   "workspace": {
     "dependencies": [
       "npm:@biomejs/biome@2.6.4",
-      "npm:ansi-regex@6.4.0",
+      "npm:ansi-regex@6.5.0",
       "npm:emoji-regex@11.0.0",
       "npm:string-width@8.3.0"
     ]
