@@ -73,6 +73,8 @@ export class Downloader extends EventEmitter<DownloaderEvents> {
 				"--sponsorblock-remove",
 				"sponsor",
 				"--embed-subs",
+				"--sub-langs",
+				"en,-live_chat",
 				"--embed-chapters",
 				"--newline"
 			];
