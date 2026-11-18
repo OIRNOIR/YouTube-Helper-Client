@@ -9,7 +9,7 @@
 		"@biomejs/biome": "npm:@biomejs/biome@2.6.6",
 		"ansi-regex": "npm:ansi-regex@6.6.0",
 		"emoji-regex": "npm:emoji-regex@11.0.0",
-		"string-width": "npm:string-width@8.3.0"
+		"string-width": "npm:string-width@9.0.0"
 	},
 	"permissions": {
 		"default": {

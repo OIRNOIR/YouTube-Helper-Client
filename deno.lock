@@ -4,7 +4,7 @@
     "npm:@biomejs/biome@2.6.6": "2.6.6",
     "npm:ansi-regex@6.6.0": "6.6.0",
     "npm:emoji-regex@11.0.0": "11.0.0",
-    "npm:string-width@8.3.0": "8.3.0"
+    "npm:string-width@9.0.0": "9.0.0"
   },
   "npm": {
     "@biomejs/biome@2.6.6": {
@@ -82,8 +82,8 @@
     "get-east-asian-width@1.7.0": {
       "integrity": "sha512-XjH1AECxf0giL2V1aU8vKyRR2ppRUb5c0EvT7zuJTokQ74bNo52zOtghqdWIqrhUD79fo3x0WfKZdOqxF6LG1Q=="
     },
-    "string-width@8.3.0": {
-      "integrity": "sha512-ZbmZM0JCihQN91dWnxoipT2KOEyHqEyfRXUyjuRhW8b/xnqPDoq4gWEVApTVa9db2wN8mmoikgFBbjh71+cGeQ==",
+    "string-width@9.0.0": {
+      "integrity": "sha512-2MOboAIRIszVGZVPA2Zqwj0ujd0o+xAZ5y2ft4OcD4kuVQ4phZxq0Sv7YTY8yaDA2CSMXch1EWTkJw+tTJZTzA==",
       "dependencies": [
         "get-east-asian-width",
         "strip-ansi"
@@ -101,7 +101,7 @@
       "npm:@biomejs/biome@2.6.6",
       "npm:ansi-regex@6.6.0",
       "npm:emoji-regex@11.0.0",
-      "npm:string-width@8.3.0"
+      "npm:string-width@9.0.0"
     ]
   }
 }
